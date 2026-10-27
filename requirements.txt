@@ -1,0 +1,29 @@
+# ==============================================================================
+# Lean Production Dependencies for GFG RAG Assistant (512MB RAM Compatible)
+# STRICT RULE: NO PyTorch / torch / sentence-transformers to prevent OOM Exit 137
+# ==============================================================================
+
+# Core REST Backend
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.1
+slowapi>=0.1.9
+
+# Vector DB Client (Chroma Cloud)
+# ChromaDB bundles its own DefaultEmbeddingFunction (ONNX + all-MiniLM-L6-v2)
+# No separate fastembed or sentence-transformers needed!
+chromadb>=0.5.20
+
+# LLM Providers (Native lean SDKs)
+google-genai>=1.0.0
+groq>=0.13.0
+
+# Frontend UI
+streamlit>=1.40.0
+requests>=2.32.0
+
+# Profiling & Testing
+psutil>=6.1.0
+pytest>=8.3.0
