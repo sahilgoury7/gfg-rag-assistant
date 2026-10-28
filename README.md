@@ -42,11 +42,19 @@ gfg-rag-assistant/
 
 ---
 
-## 🚦 Phase 0 Completed: Security & Memory Guardrails
+## 🚦 Milestone Progress
 
-- [x] **Zero Credential Leaks**: Scrubbed all raw API keys and database credentials.
-- [x] **Lightweight Embeddings**: Chroma ONNX-backed embedding engine verified without heavy PyTorch.
-- [x] **Memory Benchmark**: Verified peak memory of **105.55 MB** via `psutil` (well within Render's 512MB limit).
+- [x] **Phase 0: Security & Memory Guardrails**
+  - Scrubbed raw credentials & committed strict `.gitignore`
+  - ONNX embedding engine verified without heavy PyTorch
+  - Real RAM benchmark verified at **105.55 MB** via `psutil`
+- [x] **Phase 1: Modular Core Architecture**
+  - Fail-fast configuration with Pydantic v2 `BaseSettings`
+  - Dedicated memory-safe `EmbeddingService` (384-dim)
+  - Chroma Cloud `RetrieverService` querying 3.4 Lakh GFG articles with live canonical URL citations
+  - Dual-LLM `GeneratorService` (Gemini 3.8 Flash primary + Groq LPU failover)
+  - Terminal CLI smoke test verified end-to-end (`python scripts/test_cli.py`)
+- [ ] **Phase 2: Lean FastAPI REST Backend** (Up Next)
 
 ---
 
