@@ -37,9 +37,15 @@ class Settings(BaseSettings):
         description="Collection name storing 3.4 Lakh GFG articles"
     )
 
-    # Primary LLM: Google Gemini
+    # Primary LLM Provider Choice
+    primary_provider: Literal["groq", "google"] = Field(
+        default="groq",
+        description="Primary LLM provider to attempt first (groq or google)"
+    )
+
+    # Google Gemini Configuration
     gemini_api_key: str = Field(
-        ...,
+        default="",
         description="Google AI Studio API Key for Gemini"
     )
     primary_llm_model: str = Field(
@@ -53,7 +59,7 @@ class Settings(BaseSettings):
         description="Groq API key for LPU failover"
     )
     fallback_llm_model: str = Field(
-        default="llama-3.3-70b-versatile",
+        default="openai/gpt-oss-120b",
         description="Fallback high-speed LPU model"
     )
 

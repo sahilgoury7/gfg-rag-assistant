@@ -97,52 +97,62 @@ class GeneratorService:
         return choice.message.content.strip()
 
     def generate(self, query: str, context: str) -> GenerationResult:
-        """Generates an answer using Primary LLM with automatic fallback on failure."""
+        """Generates an answer using configured primary LLM with automatic failover."""
         user_prompt = f"""Context:
 {context}
 
 Question: {query}
 """
         primary_err: Exception | None = None
+        use_groq_first = getattr(self._settings, "primary_provider", "groq") == "groq"
 
-        # 1. Attempt Primary Generation (Google Gemini)
-        try:
-            logger.info(
-                f"Calling Primary LLM ({self._settings.primary_llm_model})..."
-            )
-            answer = self._generate_with_gemini(user_prompt)
+        def call_groq() -> GenerationResult:
+            ans = self._generate_with_groq(user_prompt)
             return GenerationResult(
-                answer=answer,
+                answer=ans,
+                model_used=self._settings.fallback_llm_model,
+                provider="groq",
+                fallback_triggered=not use_groq_first,
+            )
+
+        def call_gemini() -> GenerationResult:
+            ans = self._generate_with_gemini(user_prompt)
+            return GenerationResult(
+                answer=ans,
                 model_used=self._settings.primary_llm_model,
                 provider="google",
-                fallback_triggered=False,
+                fallback_triggered=use_groq_first,
             )
+
+        primary_func, secondary_func = (
+            (call_groq, call_gemini) if use_groq_first else (call_gemini, call_groq)
+        )
+        primary_name = "Groq" if use_groq_first else "Gemini"
+        secondary_name = "Gemini" if use_groq_first else "Groq"
+
+        # 1. Attempt Primary
+        try:
+            logger.info(f"Calling Primary LLM ({primary_name})...")
+            return primary_func()
         except Exception as err:
             primary_err = err
             logger.warning(
-                f"⚠️ Primary LLM ({self._settings.primary_llm_model}) failed: {err}. "
-                "Attempting failover to Groq..."
+                f"⚠️ Primary LLM ({primary_name}) failed: {err}. "
+                f"Attempting failover to {secondary_name}..."
             )
 
-        # 2. Attempt Fallback Generation (Groq LPU)
+        # 2. Attempt Fallback
         try:
-            logger.info(
-                f"Calling Fallback LLM ({self._settings.fallback_llm_model})..."
-            )
-            answer = self._generate_with_groq(user_prompt)
-            return GenerationResult(
-                answer=answer,
-                model_used=self._settings.fallback_llm_model,
-                provider="groq",
-                fallback_triggered=True,
-            )
+            logger.info(f"Calling Fallback LLM ({secondary_name})...")
+            return secondary_func()
         except Exception as fallback_err:
             logger.error(
-                f"❌ Both Primary and Fallback LLMs failed. Fallback error: {fallback_err}"
+                f"❌ Both Primary ({primary_name}) and Fallback ({secondary_name}) failed. "
+                f"Fallback error: {fallback_err}"
             )
             raise RuntimeError(
-                f"All LLM providers exhausted. Primary error: {primary_err}, "
-                f"Fallback error: {fallback_err}"
+                f"All LLM providers exhausted. Primary ({primary_name}) error: {primary_err}, "
+                f"Fallback ({secondary_name}) error: {fallback_err}"
             ) from fallback_err
 
 
