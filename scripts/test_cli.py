@@ -8,6 +8,7 @@ Tests: Configuration -> ONNX Embedding -> Chroma Cloud Retrieval -> LLM Generati
 import argparse
 from pathlib import Path
 import sys
+import time
 
 # Ensure repository root is on sys.path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -35,9 +36,10 @@ def run_smoke_test(query: str, top_k: int = 4) -> None:
     print("-" * 70)
 
     # 1. Validate Settings
+    t_start_total = time.perf_counter()
     try:
         settings = get_settings()
-        print(f"✅ Settings Loaded: Env={settings.app_env}, Primary Model={settings.primary_llm_model}")
+        print(f"✅ Settings Loaded: Env={settings.app_env}, Primary Provider={settings.primary_provider.upper()}")
     except Exception as err:
         print(f"❌ Configuration Error: {err}")
         print("💡 Hint: Ensure .env file exists and contains valid API keys.")
@@ -45,10 +47,12 @@ def run_smoke_test(query: str, top_k: int = 4) -> None:
 
     # 2. Retrieve Relevant Chunks from Chroma Cloud
     print("\n🔍 Step 1: Querying Chroma Cloud (3.4 Lakh Chunks)...")
+    t0_retrieval = time.perf_counter()
     try:
         retriever = get_retriever_service()
         chunks = retriever.retrieve(query=query, top_k=top_k)
-        print(f"✅ Successfully retrieved {len(chunks)} chunks.")
+        retrieval_ms = (time.perf_counter() - t0_retrieval) * 1000
+        print(f"✅ Successfully retrieved {len(chunks)} chunks in {retrieval_ms:.1f} ms.")
     except Exception as err:
         print(f"❌ Retrieval Failed: {err}")
         sys.exit(1)
@@ -65,13 +69,17 @@ def run_smoke_test(query: str, top_k: int = 4) -> None:
     # 3. Format Context & Generate Answer
     context_text = retriever.format_context(chunks)
     print("🤖 Step 2: Generating Answer via LLM Engine...")
+    t0_gen = time.perf_counter()
 
     try:
         generator = get_generator_service()
         result = generator.generate(query=query, context=context_text)
+        generation_ms = (time.perf_counter() - t0_gen) * 1000
     except Exception as err:
         print(f"❌ Generation Failed: {err}")
         sys.exit(1)
+
+    total_ms = (time.perf_counter() - t_start_total) * 1000
 
     print("\n" + "=" * 70)
     print(f"🎉 FINAL ANSWER (Model: {result.model_used} | Provider: {result.provider.upper()})")
@@ -79,6 +87,13 @@ def run_smoke_test(query: str, top_k: int = 4) -> None:
         print("⚠️  [NOTICE: Fallback was triggered due to primary failure]")
     print("=" * 70)
     print(result.answer)
+    print("=" * 70)
+
+    # Latency Telemetry Dashboard
+    print("\n⏱️  LATENCY TELEMETRY BENCHMARK:")
+    print(f"  • Chroma Cloud Retrieval (3.4L Chunks): {retrieval_ms:.1f} ms")
+    print(f"  • LLM Generation ({result.provider.upper()}):          {generation_ms:.1f} ms")
+    print(f"  • Total End-to-End Turnaround:          {total_ms:.1f} ms ({total_ms / 1000:.2f} s)")
     print("=" * 70)
 
 

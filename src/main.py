@@ -21,7 +21,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.routes import router
-from src.core.config import get_settings
+from src.core.config import Settings, get_settings
 from src.services.embedding import get_embedding_service
 from src.services.generator import get_generator_service
 from src.services.retriever import get_retriever_service
@@ -90,8 +90,6 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 # FastAPI App Instance
 # ---------------------------------------------------------------------------
 
-settings = get_settings()
-
 app = FastAPI(
     title="GFG RAG Assistant API",
     description=(
@@ -110,12 +108,21 @@ app = FastAPI(
 # CORS Middleware
 # ---------------------------------------------------------------------------
 
+# Resolved at import time — safe because get_settings() is cached via lru_cache.
 # In development: allow all origins so you can test from browser/Postman freely.
-# In production: replace "*" with your actual frontend domain (e.g. your Vercel URL).
+# In production: set ALLOWED_ORIGINS env var to your frontend domain.
+#   e.g. ALLOWED_ORIGINS=https://your-dashboard.vercel.app
+_settings = get_settings()
+_allowed_origins: list[str] = (
+    ["*"]
+    if _settings.app_env == "development"
+    else [o.strip() for o in _settings.allowed_origins.split(",") if o.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.app_env == "development" else [],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,   # credentials + wildcard origin is a browser security error
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type", "Authorization"],
 )
@@ -126,8 +133,21 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 # Mounts all routes defined in src/api/routes.py onto the main app.
-# /health and /api/v1/query are now live.
+# /health      → GET  liveness probe
+# /api/v1/query → POST RAG pipeline
 app.include_router(router)
+
+
+@app.get("/", tags=["Monitoring"], summary="Root Discovery")
+def root() -> dict[str, str]:
+    """Returns quick discovery links for docs and health checks."""
+    return {
+        "app": "GFG RAG Assistant API",
+        "version": "1.0.0",
+        "docs": "/docs",
+        "health": "/health",
+        "query": "/api/v1/query",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -137,8 +157,9 @@ app.include_router(router)
 if __name__ == "__main__":
     uvicorn.run(
         "src.main:app",
-        host=settings.host,
-        port=settings.port,
-        reload=settings.app_env == "development",
+        host=_settings.host,
+        port=_settings.port,
+        reload=_settings.app_env == "development",
         log_level="info",
     )
+

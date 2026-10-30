@@ -146,3 +146,4 @@ def run_query(request: QueryRequest) -> QueryResponse:
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected internal error occurred. Please check server logs.",
         ) from exc
+

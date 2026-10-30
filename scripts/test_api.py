@@ -41,6 +41,20 @@ def start_server() -> subprocess.Popen:
     return proc
 
 
+def test_root() -> None:
+    """Test 0: GET /"""
+    print("\n" + "=" * 55)
+    print("TEST 0 — GET / (Discovery)")
+    print("=" * 55)
+    with urllib.request.urlopen(f"{BASE_URL}/", timeout=10) as r:
+        data = json.loads(r.read())
+    print(f"  App     : {data.get('app')}")
+    print(f"  Docs    : {data.get('docs')}")
+    print(f"  Health  : {data.get('health')}")
+    assert data.get("app") == "GFG RAG Assistant API", "Root endpoint failed!"
+    print("  ✅ PASSED")
+
+
 def test_health() -> None:
     """Test 1: GET /health"""
     print("\n" + "=" * 55)
@@ -109,6 +123,7 @@ def test_validation_rejection() -> None:
 def main() -> None:
     proc = start_server()
     try:
+        test_root()
         test_health()
         test_query()
         test_validation_rejection()
@@ -127,3 +142,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

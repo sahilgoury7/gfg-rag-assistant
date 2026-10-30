@@ -74,6 +74,10 @@ class Settings(BaseSettings):
     # Server Configuration (Render Web Service)
     host: str = Field(default="0.0.0.0", description="FastAPI bind host")
     port: int = Field(default=8000, description="FastAPI bind port")
+    allowed_origins: str = Field(
+        default="*",
+        description="Comma-separated list of allowed CORS origins"
+    )
 
     model_config = SettingsConfigDict(
         env_file=".env",

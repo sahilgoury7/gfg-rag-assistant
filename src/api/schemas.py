@@ -92,3 +92,4 @@ class HealthResponse(BaseModel):
     status: str = Field(description="'ok' when all services are operational.")
     version: str = Field(description="Current application version string.")
     environment: str = Field(description="Runtime environment: development / production.")
+
