@@ -1,0 +1,37 @@
+# Git & Repository internals
+.git/
+.gitignore
+.github/
+
+# Environment secrets
+.env
+.env.*
+!.env.example
+
+# Python runtime artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+env/
+venv/
+ENV/
+
+# Development & temporary artifacts
+.tmp/
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+scripts/test_cli.py
+scripts/benchmark_memory.py
+
+# IDE & Editor caches
+.vscode/
+.idea/
+*.swp
+*.swo

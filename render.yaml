@@ -1,0 +1,50 @@
+# ==============================================================================
+# Render Blueprint Specification (Infrastructure-as-Code)
+# Documentation: https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  - type: web
+    name: gfg-rag-assistant
+    runtime: docker
+    plan: free
+    region: oregon
+    branch: main
+    healthCheckPath: /health
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+
+    envVars:
+      # Application Environment
+      - key: APP_ENV
+        value: production
+
+      # Primary Provider Config
+      - key: PRIMARY_PROVIDER
+        value: groq
+
+      # ChromaDB Cloud Configuration (3.4 Lakh Indexed GFG Chunks)
+      - key: CHROMA_TENANT
+        value: f98bf1bd-b7ed-4d64-90a8-9c4be572e360
+      - key: CHROMA_DATABASE
+        value: gfg_rag
+      - key: CHROMA_COLLECTION
+        value: articles
+
+      # LLM Models Configuration
+      - key: PRIMARY_LLM_MODEL
+        value: gemini-3.8-flash
+      - key: FALLBACK_LLM_MODEL
+        value: openai/gpt-oss-120b
+
+      # CORS Configuration
+      - key: ALLOWED_ORIGINS
+        value: "*"
+
+      # Sensitive API Keys (sync: false means enter via Render Web UI)
+      - key: CHROMA_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
