@@ -11,6 +11,11 @@ from src.services.generator import (
     GeneratorService,
     get_generator_service,
 )
+from src.services.router import (
+    QueryRouter,
+    RouteDecision,
+    get_query_router,
+)
 
 __all__ = [
     "EmbeddingService",
@@ -21,4 +26,7 @@ __all__ = [
     "GenerationResult",
     "GeneratorService",
     "get_generator_service",
+    "QueryRouter",
+    "RouteDecision",
+    "get_query_router",
 ]

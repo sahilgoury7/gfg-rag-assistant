@@ -9,6 +9,14 @@ import time
 import requests
 import streamlit as st
 
+def stream_text(text: str):
+    """Yields word tokens with a short delay for a fluid typewriter rendering."""
+    words = text.split(" ")
+    for i, word in enumerate(words):
+        yield word + (" " if i < len(words) - 1 else "")
+        time.sleep(0.008)
+
+
 # -----------------------------------------------------------------------------
 # 1. Page Configuration
 # -----------------------------------------------------------------------------
@@ -223,7 +231,7 @@ if prompt := st.chat_input("Ask any DSA or Computer Science question..."):
                 "fallback": response_data.get("fallback_triggered", False),
             }
 
-            st.markdown(answer_text)
+            st.write_stream(stream_text(answer_text))
 
             if citations:
                 with st.expander(f"📚 View source articles ({len(citations)} citations)"):

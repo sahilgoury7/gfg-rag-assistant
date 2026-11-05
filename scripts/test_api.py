@@ -120,6 +120,30 @@ def test_validation_rejection() -> None:
             print(f"  ❌ Unexpected HTTP {e.code}")
 
 
+def test_greeting_router() -> None:
+    """Test 4: POST /api/v1/query — greeting query should route to instant response"""
+    print("\n" + "=" * 55)
+    print("TEST 4 — POST /api/v1/query (chitchat routing)")
+    print("=" * 55)
+    payload = json.dumps({"query": "hello", "top_k": 3}).encode()
+    req = urllib.request.Request(
+        f"{BASE_URL}/api/v1/query",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with urllib.request.urlopen(req, timeout=10) as r:
+        data = json.loads(r.read())
+
+    print(f"  Provider      : {data['provider_used']}")
+    print(f"  Latency       : {data['latency_ms']} ms")
+    print(f"  Answer Preview: {data['answer'][:100]}...")
+    assert data["provider_used"] == "intent-router", "Should be routed to intent-router!"
+    assert len(data["citations"]) == 0, "No citations expected for greeting!"
+    assert "GeeksforGeeks" in data["answer"], "Answer must be relevant greeting!"
+    print("  ✅ PASSED")
+
+
 def main() -> None:
     proc = start_server()
     try:
@@ -127,6 +151,7 @@ def main() -> None:
         test_health()
         test_query()
         test_validation_rejection()
+        test_greeting_router()
         print("\n" + "=" * 55)
         print("🎉 ALL PHASE 2 TESTS PASSED!")
         print("=" * 55)
