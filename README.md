@@ -7,7 +7,7 @@
 [![Live Backend](https://img.shields.io/badge/Render-Live%20API-success.svg)](https://gfg-rag-assistant.onrender.com/docs)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assistant indexing **3.4 Lakh GeeksforGeeks chunks** using ChromaDB Cloud, FastAPI REST backend, and Streamlit Chat UI with verifiable source citations and multi-model failover.
+A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assistant indexing **49,298 GeeksforGeeks articles (340,153 chunks)** using ChromaDB Cloud, FastAPI REST backend, and Streamlit Chat UI with verifiable source citations and multi-model failover.
 
 ---
 
@@ -60,7 +60,7 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
      └─────────────────────────────┘    └─────────────────────────────┘
 ```
 
-- **Vector Database**: ChromaDB Cloud housing **3.4 Lakh GeeksforGeeks chunks** with HNSW indexing.
+- **Vector Database**: ChromaDB Cloud housing **49,298 GeeksforGeeks articles split into 340,153 semantic chunks** with HNSW indexing.
 - **Embeddings**: Chroma native `DefaultEmbeddingFunction` via C++ ONNX runtime (`all-MiniLM-L6-v2`, 384 dimensions, zero PyTorch footprint, strictly **~105 MB peak RSS memory**).
 - **Backend API**: FastAPI with Pydantic v2 schemas, strict type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and AnyIO worker threadpool offloading.
 - **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `openai/gpt-oss-120b` for 2s latency; Fallback: Google Gemini `gemini-3.8-flash` on 429/503 spikes).

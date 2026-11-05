@@ -92,7 +92,7 @@ with st.sidebar:
 
     st.caption(
         "**Architecture:**\n"
-        "- 3.4 Lakh GFG Chunks\n"
+        "- 49,298 GFG Articles (3.4L Chunks)\n"
         "- ChromaDB Cloud (HNSW)\n"
         "- ONNX Embeddings (384-d)\n"
         "- Groq LPU + Gemini Failover"
@@ -103,7 +103,7 @@ with st.sidebar:
 # -----------------------------------------------------------------------------
 st.title("📚 GeeksforGeeks RAG Assistant")
 st.caption(
-    "Grounding your Computer Science and DSA questions in **3.4 Lakh verified GeeksforGeeks articles** "
+    "Grounding your Computer Science and DSA questions in **49,298 verified GeeksforGeeks articles (3.4 Lakh chunks)** "
     "with instant source citations and zero hallucination."
 )
 
@@ -180,7 +180,7 @@ if prompt := st.chat_input("Ask any DSA or Computer Science question..."):
     # 2. Query the FastAPI Backend
     with st.chat_message("assistant", avatar=":material/smart_toy:"):
         with st.status(
-            ":shimmer[Searching 3.4 Lakh GFG articles & generating grounded answer...]",
+            ":shimmer[Searching 3.4 Lakh chunks across 49,298 GFG articles & generating grounded answer...]",
             type="compact",
         ) as status_box:
             start_clock = time.perf_counter()

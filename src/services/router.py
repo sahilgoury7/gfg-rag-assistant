@@ -80,7 +80,7 @@ class QueryRouter:
 
     CANNED_GREETING: str = (
         "Hello! 👋 I am your **GeeksforGeeks AI Assistant**.\n\n"
-        "I am directly grounded in over **3.4 Lakh verified GeeksforGeeks articles** "
+        "I am directly grounded in **49,298 verified GeeksforGeeks articles (340,153 semantic chunks)** "
         "to help you learn and solve:\n"
         "- 💡 **Data Structures & Algorithms** (Arrays, Trees, Graphs, DP, Sorting)\n"
         "- ⚡ **Programming Languages** (Python, C++, Java, JavaScript)\n"
@@ -92,7 +92,8 @@ class QueryRouter:
         "I am the **GeeksforGeeks RAG Assistant** 📚\n\n"
         "My purpose is to answer your Computer Science, programming, and interview "
         "preparation questions with **zero hallucination** by retrieving verified "
-        "explanations and code directly from GeeksforGeeks documentation with clickable citations.\n\n"
+        "explanations and code directly from **49,298 GeeksforGeeks articles (3.4 Lakh chunks)** "
+        "with clickable citations.\n\n"
         "**Try asking me:**\n"
         "- *\"Explain Binary Search with time complexity\"*\n"
         "- *\"What is Dynamic Programming and its key properties?\"*\n"
@@ -103,6 +104,11 @@ class QueryRouter:
         "You're very welcome! 😊\n\n"
         "Happy coding! Whenever you have another DSA, programming, or Computer Science "
         "question, feel free to ask anytime."
+    )
+
+    GREETING_REGEX: re.Pattern = re.compile(
+        r"^(h+i+|h+e+y+|h+e+l+o+|h+o+l+a|namaste|howdy|sup|yo|good\s*(morning|afternoon|evening|day)|greetings)\b",
+        re.IGNORECASE,
     )
 
     def route(self, query: str) -> RouteDecision:
@@ -118,12 +124,19 @@ class QueryRouter:
         cleaned = re.sub(r"[^\w\s]", "", query.strip().lower())
         cleaned = " ".join(cleaned.split())
 
+        # Collapse duplicate characters (e.g. 'hii' -> 'hi', 'heyyy' -> 'hey', 'hellooo' -> 'helo')
+        simplified = re.sub(r"(.)\1+", r"\1", cleaned)
+
         tokens = cleaned.split()
         token_count = len(tokens)
 
         # ── 1. Check for Short Greetings / Pleasantries (<= 4 words) ─────────
         if token_count <= 4:
-            if cleaned in self.EXACT_GREETINGS:
+            if (
+                cleaned in self.EXACT_GREETINGS
+                or simplified in self.EXACT_GREETINGS
+                or self.GREETING_REGEX.match(cleaned)
+            ):
                 logger.info(f"Query routed as GREETING: '{query}'")
                 return RouteDecision(
                     is_chitchat=True,
@@ -131,7 +144,7 @@ class QueryRouter:
                     intent="greeting",
                 )
 
-            if cleaned in self.EXACT_IDENTITY:
+            if cleaned in self.EXACT_IDENTITY or simplified in self.EXACT_IDENTITY:
                 logger.info(f"Query routed as IDENTITY: '{query}'")
                 return RouteDecision(
                     is_chitchat=True,
@@ -139,7 +152,7 @@ class QueryRouter:
                     intent="identity",
                 )
 
-            if cleaned in self.EXACT_GRATITUDE:
+            if cleaned in self.EXACT_GRATITUDE or simplified in self.EXACT_GRATITUDE:
                 logger.info(f"Query routed as GRATITUDE: '{query}'")
                 return RouteDecision(
                     is_chitchat=True,
@@ -147,9 +160,7 @@ class QueryRouter:
                     intent="gratitude",
                 )
 
-        # ── 2. Check for Prefix Greetings (e.g. 'hello what is python') ─────
-        # If user starts with 'hello' but has a real question, we strip the greeting
-        # and allow the pipeline to retrieve technical context
+        # ── 2. Allow technical queries to proceed to RAG retrieval ───────────
         return RouteDecision(is_chitchat=False, intent="technical")
 
 
