@@ -2,7 +2,7 @@
 
 [![Python Version](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.40+-FF4B4B.svg)](https://streamlit.io)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gfg-rag-assistant.streamlit.app/)
 [![ChromaDB Cloud](https://img.shields.io/badge/ChromaDB-3.4L%20Chunks-orange.svg)](https://trychroma.com)
 [![Live Backend](https://img.shields.io/badge/Render-Live%20API-success.svg)](https://gfg-rag-assistant.onrender.com/docs)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
@@ -18,7 +18,7 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
 | **Interactive API Docs** | Render Cloud | [https://gfg-rag-assistant.onrender.com/docs](https://gfg-rag-assistant.onrender.com/docs) | 🟢 **200 OK Live** |
 | **API Health Probe** | Render Cloud | [https://gfg-rag-assistant.onrender.com/health](https://gfg-rag-assistant.onrender.com/health) | 🟢 **Healthy** |
 | **Root Discovery** | Render Cloud | [https://gfg-rag-assistant.onrender.com/](https://gfg-rag-assistant.onrender.com/) | 🟢 **Online** |
-| **Streamlit Chat UI** | Localhost / Cloud | `streamlit run src/frontend/app.py` | 🟢 **Ready** |
+| **Streamlit Chat UI** | Streamlit Cloud | [https://gfg-rag-assistant.streamlit.app/](https://gfg-rag-assistant.streamlit.app/) | 🟢 **Live Web UI** |
 
 ---
 
