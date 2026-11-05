@@ -66,3 +66,4 @@ def test_generator_both_providers_fail():
         generator.generate(query="What is quicksort?", context="Quicksort partitions.")
 
     assert "All LLM providers exhausted" in str(exc_info.value)
+

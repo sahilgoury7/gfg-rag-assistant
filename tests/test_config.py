@@ -39,3 +39,4 @@ def test_settings_invalid_provider():
     """primary_provider must only accept 'groq' or 'google'."""
     with pytest.raises(ValidationError):
         Settings(chroma_api_key="k", primary_provider="openai")
+

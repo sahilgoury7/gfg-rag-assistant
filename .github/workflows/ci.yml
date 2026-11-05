@@ -29,3 +29,4 @@ jobs:
       - name: Execute automated Pytest test suite
         run: |
           pytest tests/ -v
+

@@ -89,3 +89,4 @@ def test_retriever_query_parsing():
     assert results[0].source_url == "https://geeksforgeeks.org/merge-sort"
     assert round(results[0].distance, 2) == 0.22
     assert round(results[0].relevance_score, 2) == 0.78
+
