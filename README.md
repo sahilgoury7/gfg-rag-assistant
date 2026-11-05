@@ -74,6 +74,11 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
 
 ```text
 gfg-rag-assistant/
+├── .github/                      # CI/CD Workflows
+│   └── workflows/
+│       └── ci.yml                # Automated Pytest suite runner on Push & Pull Requests
+├── .streamlit/                   # Streamlit Configuration & Branding
+│   └── config.toml               # Custom GeeksforGeeks green theme & server parameters
 ├── .dockerignore                 # Excludes .git, .env, and local caches from Docker image
 ├── .env.example                  # Documented environment variables template
 ├── .gitignore                    # Strict rules ignoring secrets, virtualenvs, and pycache
@@ -85,11 +90,20 @@ gfg-rag-assistant/
 ├── notebooks/                    # Interactive Colab exploration & RAG pipeline
 │   └── GeeksforGeeks_Advanced_RAG_Pipeline.ipynb
 │
-├── scripts/                      # Operational verification & smoke test scripts
+├── scripts/                      # Operational pipelines & evaluation runners
 │   ├── benchmark_memory.py       # Live RAM profiler (verified at 105.55 MB peak RSS)
+│   ├── evaluate.py               # RAG Triad automated evaluation runner
+│   ├── ingest.py                 # Resilient data ingestion ETL script with --dry-run
 │   ├── test_api.py               # Automated HTTP integration & negative test suite
 │   ├── test_cli.py               # Terminal CLI end-to-end smoke test
 │   └── verify_embeddings.py      # ONNX 384-dimension vector verification
+│
+├── tests/                        # Automated Pytest Unit & Integration Test Suite
+│   ├── __init__.py
+│   ├── test_config.py            # Settings parsing and constraint bounds testing
+│   ├── test_generator.py         # Dual-LLM Circuit Breaker failover testing
+│   ├── test_retriever.py         # Relevance scoring and context block formatting
+│   └── test_schemas.py           # Pydantic v2 positive/negative validation tests
 │
 └── src/                          # Production Decoupled 3-Tier Source Code
     ├── __init__.py
@@ -97,16 +111,17 @@ gfg-rag-assistant/
     │
     ├── api/                      # Layer 3: Web Presentation & Controller
     │   ├── __init__.py
-    │   ├── routes.py             # Route definitions (GET /health, POST /api/v1/query)
+    │   ├── routes.py             # Rate-limited route definitions (GET /health, POST /api/v1/query)
     │   └── schemas.py            # Pydantic v2 Request & Response DTO contracts
     │
-    ├── core/                     # Layer 1: Core Configuration & App Invariants
+    ├── core/                     # Layer 1: Core Configuration & Security
     │   ├── __init__.py
-    │   └── config.py             # Pydantic BaseSettings, @lru_cache singleton, Fail-Fast
+    │   ├── config.py             # Pydantic BaseSettings, @lru_cache singleton, Fail-Fast
+    │   └── limiter.py            # Slowapi IP-based rate limiter (15 req/min)
     │
     ├── frontend/                 # Presentation Layer: Streamlit Conversational UI
     │   ├── __init__.py
-    │   └── app.py                # Streamlit chat interface with citation expanders
+    │   └── app.py                # Streamlit chat interface with typewriter streaming & citations
     │
     └── services/                 # Layer 2: Business Logic & External Integrations
         ├── __init__.py
@@ -126,7 +141,7 @@ gfg-rag-assistant/
 - [x] **Phase 1: Modular Core Architecture**
   - Fail-fast configuration with Pydantic v2 `BaseSettings` & `@lru_cache`
   - Dedicated memory-safe `EmbeddingService` (384-dim normalized floats)
-  - Chroma Cloud `RetrieverService` querying 3.4 Lakh GFG chunks with canonical URLs
+  - Chroma Cloud `RetrieverService` querying 49,298 GFG articles (340,153 chunks) with canonical URLs
   - Dual-LLM `GeneratorService` (Groq primary + Gemini failover, `temperature=0.0`)
   - End-to-end CLI smoke test verified (`python scripts/test_cli.py`)
 - [x] **Phase 2: Lean FastAPI REST Backend**
@@ -143,6 +158,16 @@ gfg-rag-assistant/
   - Interactive conversational chat interface in `src/frontend/app.py`
   - Verifiable citation cards displaying GFG article links & similarity match percentage
   - Real-time latency badges, provider telemetry, and interactive suggestion chips
+- [x] **Phase 5: Production Hardening, Streaming & Theming**
+  - Fluid typewriter response rendering with `st.write_stream`
+  - Custom GFG green branding in `.streamlit/config.toml`
+  - **Live Streamlit Cloud Deployment:** [https://gfg-rag-assistant.streamlit.app/](https://gfg-rag-assistant.streamlit.app/)
+  - IP-based rate limiting via Slowapi (`15 req/min`) protecting public API quotas
+- [x] **Phase 6: Testing, CI/CD, Ingestion & Evaluation**
+  - Automated Pytest test suite (`tests/`) with 17 unit tests (100% pass rate)
+  - GitHub Actions automated CI/CD pipeline (`.github/workflows/ci.yml`) on every push/PR
+  - Standalone data ingestion ETL script with `--dry-run` support (`scripts/ingest.py`)
+  - RAG Triad automated evaluation scorecard runner (`scripts/evaluate.py`)
 
 ---
 
