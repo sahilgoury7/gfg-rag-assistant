@@ -3,6 +3,7 @@
 [![Python Version](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gfg-rag-assistant.streamlit.app/)
+[![CI Testing](https://github.com/sahilgoury7/gfg-rag-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/sahilgoury7/gfg-rag-assistant/actions/workflows/ci.yml)
 [![ChromaDB Cloud](https://img.shields.io/badge/ChromaDB-3.4L%20Chunks-orange.svg)](https://trychroma.com)
 [![Live Backend](https://img.shields.io/badge/Render-Live%20API-success.svg)](https://gfg-rag-assistant.onrender.com/docs)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
