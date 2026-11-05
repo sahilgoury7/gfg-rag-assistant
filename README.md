@@ -81,6 +81,9 @@ gfg-rag-assistant/
 ├── render.yaml                   # Infrastructure-as-Code (IaC) Render Cloud blueprint
 ├── requirements.txt              # Pinned production dependencies (Strictly NO PyTorch)
 │
+├── notebooks/                    # Interactive Colab exploration & RAG pipeline
+│   └── GeeksforGeeks_Advanced_RAG_Pipeline.ipynb
+│
 ├── scripts/                      # Operational verification & smoke test scripts
 │   ├── benchmark_memory.py       # Live RAM profiler (verified at 105.55 MB peak RSS)
 │   ├── test_api.py               # Automated HTTP integration & negative test suite

@@ -22,6 +22,7 @@ venv/
 ENV/
 
 # Development & temporary artifacts
+notebooks/
 .tmp/
 .pytest_cache/
 .coverage
