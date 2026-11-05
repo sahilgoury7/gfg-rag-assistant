@@ -19,7 +19,6 @@ from src.api.schemas import Citation, HealthResponse, QueryRequest, QueryRespons
 from src.core.config import get_settings
 from src.services.generator import get_generator_service
 from src.services.retriever import get_retriever_service
-from src.services.router import get_query_router
 
 logger = logging.getLogger(__name__)
 
@@ -88,25 +87,6 @@ def run_query(request: QueryRequest) -> QueryResponse:
     logger.info(f"Incoming query: '{request.query}' | top_k={request.top_k}")
 
     try:
-        # ── Step 0: Check Intent Router (Bypass retrieval for chitchat/greetings) ──
-        query_router = get_query_router()
-        route_decision = query_router.route(request.query)
-
-        if route_decision.is_chitchat:
-            latency_ms = round((time.perf_counter() - start_time) * 1000, 2)
-            logger.info(
-                f"Conversational intent detected ({route_decision.intent}) | "
-                f"bypassed retrieval | latency={latency_ms}ms"
-            )
-            return QueryResponse(
-                query=request.query,
-                answer=route_decision.canned_response or "",
-                citations=[],
-                provider_used="intent-router",
-                fallback_triggered=False,
-                latency_ms=latency_ms,
-            )
-
         # ── Step 1: Retrieve relevant GFG chunks from ChromaDB ───────────────
         retriever = get_retriever_service()
         chunks = retriever.retrieve(query=request.query, top_k=request.top_k)
