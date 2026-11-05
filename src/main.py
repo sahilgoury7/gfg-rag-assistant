@@ -19,9 +19,12 @@ from typing import AsyncGenerator
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from src.api.routes import router
 from src.core.config import Settings, get_settings
+from src.core.limiter import limiter
 from src.services.embedding import get_embedding_service
 from src.services.generator import get_generator_service
 from src.services.retriever import get_retriever_service
@@ -102,6 +105,12 @@ app = FastAPI(
     redoc_url="/redoc",     # ReDoc UI at http://localhost:8000/redoc
     lifespan=lifespan,
 )
+
+# ---------------------------------------------------------------------------
+# Rate Limiting (Slowapi)
+# ---------------------------------------------------------------------------
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 # ---------------------------------------------------------------------------

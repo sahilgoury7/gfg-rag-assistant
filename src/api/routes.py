@@ -13,10 +13,11 @@ Route logic follows the Controller pattern:
 import logging
 import time
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from src.api.schemas import Citation, HealthResponse, QueryRequest, QueryResponse
 from src.core.config import get_settings
+from src.core.limiter import limiter
 from src.services.generator import get_generator_service
 from src.services.retriever import get_retriever_service
 
@@ -68,11 +69,13 @@ def health_check() -> HealthResponse:
     ),
     tags=["RAG Pipeline"],
 )
-def run_query(request: QueryRequest) -> QueryResponse:
+@limiter.limit("15/minute")
+def run_query(request: Request, payload: QueryRequest) -> QueryResponse:
     """Orchestrates the full Embed → Retrieve → Generate pipeline.
 
     Args:
-        request: Validated QueryRequest containing the user query and top_k setting.
+        request: Raw Starlette/FastAPI Request used by Slowapi for client IP rate limiting.
+        payload: Validated QueryRequest containing the user query and top_k setting.
 
     Returns:
         QueryResponse with answer, GFG citations, provider telemetry, and latency.
@@ -84,12 +87,12 @@ def run_query(request: QueryRequest) -> QueryResponse:
     # ── Start latency timer ──────────────────────────────────────────────────
     start_time = time.perf_counter()
 
-    logger.info(f"Incoming query: '{request.query}' | top_k={request.top_k}")
+    logger.info(f"Incoming query: '{payload.query}' | top_k={payload.top_k}")
 
     try:
         # ── Step 1: Retrieve relevant GFG chunks from ChromaDB ───────────────
         retriever = get_retriever_service()
-        chunks = retriever.retrieve(query=request.query, top_k=request.top_k)
+        chunks = retriever.retrieve(query=payload.query, top_k=payload.top_k)
 
         if not chunks:
             logger.warning("ChromaDB returned zero chunks — collection may be empty.")
@@ -99,7 +102,7 @@ def run_query(request: QueryRequest) -> QueryResponse:
 
         # ── Step 3: Generate answer via Dual-LLM Circuit Breaker ─────────────
         generator = get_generator_service()
-        result = generator.generate(query=request.query, context=context)
+        result = generator.generate(query=payload.query, context=context)
 
         # ── Step 4: Build citation list from retrieved chunks ─────────────────
         citations = [
@@ -119,7 +122,7 @@ def run_query(request: QueryRequest) -> QueryResponse:
         )
 
         return QueryResponse(
-            query=request.query,
+            query=payload.query,
             answer=result.answer,
             citations=citations,
             provider_used=result.provider,
