@@ -8,7 +8,7 @@
 [![Live Backend](https://img.shields.io/badge/Render-Live%20API-success.svg)](https://gfg-rag-assistant.onrender.com/docs)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assistant indexing **49,298 GeeksforGeeks articles (340,153 chunks)** using ChromaDB Cloud, FastAPI REST backend, and Streamlit Chat UI with verifiable source citations and multi-model failover.
+A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assistant indexing **49,298 GeeksforGeeks articles (340,153 chunks)** using ChromaDB Cloud, FastAPI REST backend, and Streamlit Chat UI with source citations and multi-model failover.
 
 ---
 
@@ -57,13 +57,13 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
      ┌─────────────────────────────┐                   │ 4. Grounded Answer
      │   ChromaDB Cloud (HNSW)     │                   ▼
      │  - 3.4 Lakh Indexed Chunks  │    ┌─────────────────────────────┐
-     │  - Canonical Source URLs    │───>│   Verifiable Citations JSON │
+     │  - Canonical Source URLs    │───>│        Citations JSON       │
      └─────────────────────────────┘    └─────────────────────────────┘
 ```
 
 - **Vector Database**: ChromaDB Cloud housing **49,298 GeeksforGeeks articles split into 340,153 semantic chunks** with HNSW indexing (squared L2 distance mathematically converted to cosine similarity via $1 - d/2$).
-- **Embeddings**: Chroma native `DefaultEmbeddingFunction` via C++ ONNX runtime (`all-MiniLM-L6-v2`, 384 dimensions, zero PyTorch footprint, strictly **~105 MB peak RSS memory**).
-- **Backend API**: FastAPI with Pydantic v2 schemas, strict type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and reverse proxy client IP resolution.
+- **Embeddings**: Chroma native `DefaultEmbeddingFunction` via C++ ONNX runtime (`all-MiniLM-L6-v2`, 384 dimensions, no PyTorch dependency, keeping peak RSS around **~60–105 MB**).
+- **Backend API**: FastAPI with Pydantic v2 schemas, type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and reverse proxy client IP resolution.
 - **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `openai/gpt-oss-120b` for ~1.5s latency; Fallback: Google Gemini `gemini-2.5-flash` on 429/503 spikes).
 - **Frontend UI**: Streamlit modern chat interface with interactive GFG source citation cards, onboarding suggestion pills, and real-time latency badges.
 - **Containerization**: Multi-stage `Dockerfile` (Builder stage + Runner stage with Python 3.12-slim, non-root `appuser`, dynamic `$PORT` binding, and proxy header forwarding) deployed on Render Free Tier (<512 MB RAM).
@@ -82,23 +82,23 @@ gfg-rag-assistant/
 ├── .dockerignore                 # Excludes .git, .env, and local caches from Docker image
 ├── .env.example                  # Documented environment variables template
 ├── .gitignore                    # Strict rules ignoring secrets, virtualenvs, and pycache
-├── Dockerfile                    # Multi-stage production Dockerfile (<200MB runner image)
+├── Dockerfile                    # Multi-stage production Dockerfile (minimal runner image)
 ├── README.md                     # Portfolio documentation & architecture specification
 ├── render.yaml                   # Infrastructure-as-Code (IaC) Render Cloud blueprint
-├── requirements.txt              # Exact pinned dependencies (==) for reproducible builds
+├── requirements.txt              # Pinned dependencies (==) for reproducible builds
 │
 ├── notebooks/                    # Interactive Colab exploration & RAG pipeline
 │   └── GeeksforGeeks_Advanced_RAG_Pipeline.ipynb
 │
 ├── scripts/                      # Operational pipelines & evaluation runners
-│   ├── benchmark_memory.py       # Live RAM profiler (verified at 105.55 MB peak RSS)
+│   ├── benchmark_memory.py       # Local RAM profiler (measured at ~60–105 MB peak RSS)
 │   ├── evaluate.py               # Deterministic RAG heuristic smoke-check & latency runner
-│   ├── ingest.py                 # Resilient data ingestion ETL script with --dry-run
-│   ├── test_api.py               # Automated HTTP integration & negative test suite
+│   ├── ingest.py                 # Data ingestion ETL script with --dry-run
+│   ├── test_api.py               # HTTP integration & negative test suite
 │   ├── test_cli.py               # Terminal CLI end-to-end smoke test
 │   └── verify_embeddings.py      # ONNX 384-dimension vector verification
 │
-├── tests/                        # Automated Pytest Unit & Integration Test Suite (23 Tests)
+├── tests/                        # Automated Pytest Unit & Integration Test Suite (25 Tests)
 │   ├── __init__.py
 │   ├── test_api_endpoints.py     # FastAPI endpoints direct & TestClient integration tests
 │   ├── test_config.py            # Settings parsing and constraint bounds testing
@@ -136,15 +136,15 @@ gfg-rag-assistant/
 ## 🚦 Milestone Progress
 
 - [x] **Phase 0: Security & Memory Guardrails**
-  - Scrubbed raw credentials & committed strict `.gitignore`
-  - ONNX embedding engine verified without heavy PyTorch
-  - Real RAM benchmark verified at **105.55 MB** via `psutil` (Safely within 512MB RAM cap)
+  - Scrubbed raw credentials & committed `.gitignore`
+  - ONNX embedding engine without heavy PyTorch
+  - Local RAM benchmark measured at **~60–105 MB** via `psutil` (within 512MB RAM cap)
 - [x] **Phase 1: Modular Core Architecture**
   - Fail-fast configuration with Pydantic v2 `BaseSettings` & `@lru_cache`
   - Dedicated memory-safe `EmbeddingService` (384-dim normalized floats)
   - Chroma Cloud `RetrieverService` querying 49,298 GFG articles (340,153 chunks) with canonical URLs
   - Dual-LLM `GeneratorService` (Groq primary + Gemini failover, `temperature=0.0`)
-  - End-to-end CLI smoke test verified (`python scripts/test_cli.py`)
+  - End-to-end CLI smoke test run (`python scripts/test_cli.py`)
 - [x] **Phase 2: Lean FastAPI REST Backend**
   - Pydantic v2 contracts (`QueryRequest`, `QueryResponse`, `Citation`, `HealthResponse`)
   - Endpoints: `GET /health` (liveness), `GET /` (root discovery), `POST /api/v1/query`
@@ -154,10 +154,10 @@ gfg-rag-assistant/
 - [x] **Phase 3: Dockerization & Cloud Deployment**
   - Multi-stage production `Dockerfile` with Python 3.12-slim and non-root `appuser`
   - Infrastructure-as-Code `render.yaml` specification with encrypted secret injection
-  - **Live Cloud Deployment verified on Render:** [https://gfg-rag-assistant.onrender.com/docs](https://gfg-rag-assistant.onrender.com/docs)
+  - **Live Cloud Deployment on Render:** [https://gfg-rag-assistant.onrender.com/docs](https://gfg-rag-assistant.onrender.com/docs)
 - [x] **Phase 4: Streamlit Chat Frontend**
   - Interactive conversational chat interface in `src/frontend/app.py`
-  - Verifiable citation cards displaying GFG article links & similarity match percentage
+  - Citation cards displaying GFG article links & similarity match percentage
   - Real-time latency badges, provider telemetry, and interactive suggestion chips
 - [x] **Phase 5: Production Hardening, Streaming & Theming**
   - Fluid typewriter response rendering with `st.write_stream`
@@ -168,8 +168,8 @@ gfg-rag-assistant/
   - Automated Pytest test suite (`tests/`) with **25 unit & integration tests** (24 passed, 1 skipped locally on Windows Python 3.14 due to AnyIO platform behavior)
   - Direct FastAPI endpoint test suite (`tests/test_api_endpoints.py`) with mocked retrieval, failover, and rate limiting validation
   - GitHub Actions automated CI/CD pipeline (`.github/workflows/ci.yml`) on Python 3.12 runner
-  - Standalone data ingestion ETL script with `--dry-run` support (`scripts/ingest.py`)
-  - Lightweight deterministic heuristic smoke-check runner (`scripts/evaluate.py`)
+  - Data ingestion ETL script with `--dry-run` support (`scripts/ingest.py`)
+  - Deterministic heuristic smoke-check runner (`scripts/evaluate.py`)
 
 ---
 
@@ -182,23 +182,23 @@ The master evaluation suite is documented in [`notebooks/GeeksforGeeks_Advanced_
 | :--- | :---: | :---: | :---: | :--- |
 | **Context Precision** | **81.0%** | **85.0%** | **+4.0% 🟢** | Cross-Encoder successfully promoted the true answer chunk to Rank 1. |
 | **Context Recall** | **90.0%** | **85.0%** | **-5.0% 🔍** | Pruning from 5 to 3 chunks slightly reduced peripheral fact surface area. |
-| **Faithfulness** | **91.0%** | **85.0%** | **-6.0%** | Both pipelines strictly adhered to grounding context without hallucinating. |
+| **Faithfulness** | **91.0%** | **85.0%** | **-6.0%** | Both pipelines adhered to grounding context without hallucinating. |
 | **Answer Relevance** | **90.0%** | **85.0%** | **-5.0%** | Direct, concise, technical answers without fluff. |
 
 > 💡 **Precision vs. Recall Root Cause Analysis (RCA) & Production Architecture:**  
 > In the research lab ([`notebooks/`](notebooks/)), Cross-Encoder re-ranking (`ms-marco-MiniLM-L-6-v2`) boosted Context Precision from **81.0% to 85.0%** across our 5-domain golden benchmark by promoting true answers to Top-3 chunks. However, PyTorch cross-encoders carry estimated runtime footprints of hundreds of megabytes (~350–500 MB), leaving virtually zero safety headroom under Render's 512 MB Free Tier memory budget.  
-> **Production Choice:** To operate comfortably within the 512 MB limit (measured locally at ~60–105 MB peak RSS via `psutil` in `scripts/benchmark_memory.py`), the production microservice uses a lean C++ ONNX runtime with dense vector retrieval at `top_k = 4`. Deploying an external re-ranking API or quantized model is part of the planned enterprise roadmap.
+> **Production Choice:** To operate comfortably within the 512 MB limit (measured locally at ~60–105 MB peak RSS via `psutil` in `scripts/benchmark_memory.py`), the production microservice uses a lean C++ ONNX runtime with dense vector retrieval at `top_k = 4`. Deploying an external re-ranking API or quantized model is part of planned next steps.
 
 ### 2. Distance Space & Mathematical Similarity Conversion
 ChromaDB Cloud collections without explicit space metadata default to squared Euclidean (L2) distance ($d = \|u - v\|^2$). For unit-normalized embedding vectors (as generated by `all-MiniLM-L6-v2`):
 $$\|u - v\|^2 = \|u\|^2 + \|v\|^2 - 2(u \cdot v) = 2 - 2\cos(\theta) \implies \cos(\theta) = 1 - \frac{d}{2}$$
-The production `RetrieverService` accurately computes cosine similarity using $\max(0.0, 1.0 - \frac{d}{2})$, mapping a live query distance of $0.274$ to an authentic **86.3% citation match**.
+The production `RetrieverService` computes cosine similarity using $\max(0.0, 1.0 - \frac{d}{2})$, mapping a live query distance of $0.274$ to an **86.3% citation match**.
 
 ### 3. Lightweight CI Developer Smoke-Check (`scripts/evaluate.py`)
 To prevent recurring API billing and maintain sub-second local test loops during development and CI, `scripts/evaluate.py` provides a deterministic heuristic smoke-check:
 - **Lexical Overlap Grounding**: Checks unigram/n-gram content word intersection between context and answer without artificial score multipliers.
 - **Keyword Spotting**: Validates topic-specific technical vocabulary presence.
-- **Latency Verification**: Tracks end-to-end response times across retrieval and inference.
+- **Latency Tracking**: Tracks end-to-end response times across retrieval and inference.
 
 ---
 
@@ -206,15 +206,15 @@ To prevent recurring API billing and maintain sub-second local test loops during
 
 ### 1. Client-Side Typewriter UX vs. Server-Sent Events (SSE)
 - **Current Architecture**: The FastAPI backend currently returns an atomic, strongly-typed JSON contract (`QueryResponse`) containing the answer, ranked citations, similarity scores, and provider telemetry. The Streamlit frontend simulates fluid typing via `st.write_stream` and token delays.
-- **Engineering Tradeoff & Roadmap**: An atomic JSON response allows simple, robust schema validation and clean coupling of citations and similarity scores alongside the answer. Upgrading to native backend Server-Sent Events (SSE) token streaming is our next planned architectural evolution.
+- **Engineering Tradeoff & Roadmap**: An atomic JSON response allows simple, robust schema validation and clean coupling of citations and similarity scores alongside the answer. Upgrading to native backend Server-Sent Events (SSE) token streaming is our planned next step.
 
 ### 2. Stateless REST API & Reverse Proxy Security
-- The backend remains strictly stateless: each query is processed independently without server-side conversational memory, allowing horizontal auto-scaling across container replicas without sticky sessions or distributed Redis locks.
+- The backend remains stateless: each query is processed independently without server-side conversational memory, allowing horizontal auto-scaling across container replicas without sticky sessions or distributed Redis locks.
 - Uvicorn runs with `--proxy-headers --forwarded-allow-ips='*'`, enabling Uvicorn's trusted proxy middleware to automatically populate `request.client.host` with genuine client IPs from `X-Forwarded-For`. This allows Slowapi's standard `get_remote_address` to enforce IP quotas without custom header-spoofing risks.
 
 ### 3. Multi-Stage Docker Build
 - **Builder Stage**: Installs dependencies and builds wheels into a clean virtual environment (`/opt/venv`).
-- **Runner Stage**: Minimal `python:3.12-slim` base, copying strictly `/opt/venv` and application `src/`, dropping build compilers and temporary files.
+- **Runner Stage**: Minimal `python:3.12-slim` base, copying only `/opt/venv` and application `src/`, dropping build compilers and temporary files.
 - Executed under a dedicated, non-privileged system user (`appuser`) with dynamic `$PORT` binding.
 
 ---
