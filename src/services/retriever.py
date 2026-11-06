@@ -28,8 +28,18 @@ class RetrievedChunk:
 
     @property
     def relevance_score(self) -> float:
-        """Converts cosine distance into a similarity score (0.0 to 1.0)."""
-        return max(0.0, 1.0 - self.distance)
+        """Converts ChromaDB squared L2 distance into cosine similarity (0.0 to 1.0).
+
+        Mathematical Foundation:
+        For unit-normalized embeddings (as produced by ONNX all-MiniLM-L6-v2):
+            ||u - v||^2 = ||u||^2 + ||v||^2 - 2(u · v) = 2 - 2*cos(θ)
+            d_l2 = 2 * (1 - cos(θ))
+            cos(θ) = 1 - (d_l2 / 2.0)
+
+        Chroma's default metric is squared L2 distance. Thus, exact cosine similarity
+        is: max(0.0, min(1.0, 1.0 - (distance / 2.0))).
+        """
+        return max(0.0, min(1.0, 1.0 - (self.distance / 2.0)))
 
 
 class RetrieverService:

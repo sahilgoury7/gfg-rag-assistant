@@ -98,7 +98,7 @@ def test_run_query_e2e_pipeline():
         assert len(response.citations) == 1
         assert response.citations[0].title == "Binary Search Algorithm"
         assert response.citations[0].url == "https://geeksforgeeks.org/binary-search"
-        assert round(response.citations[0].relevance_score, 2) == 0.85
+        assert round(response.citations[0].relevance_score, 3) == 0.925
         assert response.provider_used == "groq"
         assert response.fallback_triggered is False
         assert response.latency_ms > 0
@@ -142,31 +142,19 @@ def test_run_query_fallback_telemetry():
         assert len(response.citations) == 0
 
 
-def test_rate_limiter_proxy_ip_resolution():
-    """get_real_client_ip must extract genuine client IP from X-Forwarded-For header."""
-    from src.core.limiter import get_real_client_ip
+def test_rate_limiter_key_func():
+    """Limiter key function should resolve client IP from request.client.host (populated by Uvicorn proxy headers)."""
+    from src.core.limiter import limiter
 
-    # Case 1: Standard direct request without proxy headers
-    scope_direct = {
+    scope = {
         "type": "http",
         "method": "POST",
         "path": "/api/v1/query",
         "headers": [],
         "client": ("192.168.1.50", 54321),
     }
-    req_direct = Request(scope_direct)
-    assert get_real_client_ip(req_direct) == "192.168.1.50"
-
-    # Case 2: Behind Cloud reverse proxy (Render / Cloudflare / ALB)
-    scope_proxy = {
-        "type": "http",
-        "method": "POST",
-        "path": "/api/v1/query",
-        "headers": [(b"x-forwarded-for", b"203.0.113.195, 10.0.0.1")],
-        "client": ("10.0.0.1", 80),  # Internal proxy IP
-    }
-    req_proxy = Request(scope_proxy)
-    assert get_real_client_ip(req_proxy) == "203.0.113.195"
+    req = Request(scope)
+    assert limiter._key_func(req) == "192.168.1.50"
 
 
 @pytest.mark.skipif(

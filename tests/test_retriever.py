@@ -11,7 +11,7 @@ from src.services.retriever import RetrievedChunk, RetrieverService
 
 
 def test_chunk_relevance_score_conversion():
-    """Distance should convert to relevance score as max(0.0, 1.0 - distance)."""
+    """Distance should convert from squared L2 to cosine similarity as max(0.0, 1.0 - distance / 2)."""
     chunk_high = RetrievedChunk(
         chunk_id="chunk_1",
         text="Binary Search divides the search space in half.",
@@ -19,34 +19,39 @@ def test_chunk_relevance_score_conversion():
         title="Binary Search",
         distance=0.15,
     )
-    assert round(chunk_high.relevance_score, 2) == 0.85
+    # 1 - (0.15 / 2) = 0.925
+    assert round(chunk_high.relevance_score, 3) == 0.925
 
     chunk_far = RetrievedChunk(
         chunk_id="chunk_2",
         text="Unrelated content.",
         source_url=None,
         title="Unrelated",
-        distance=1.25,
+        distance=2.5,
     )
     assert chunk_far.relevance_score == 0.0
 
 
-def test_chroma_cosine_space_relevance_bounds():
-    """Chroma HNSW cosine distance (0.0 to 2.0) converts monotonically to [0.0, 1.0]."""
+def test_chroma_l2_to_cosine_space_relevance_bounds():
+    """Chroma squared L2 distance (0.0 to 4.0 for unit vectors) converts to cosine similarity [0.0, 1.0]."""
     # Identical vector (distance = 0.0) -> perfect similarity (1.0)
     c_identical = RetrievedChunk("id_0", "text", None, "t", distance=0.0)
     assert c_identical.relevance_score == 1.0
 
-    # Intermediate match (distance = 0.274, real Chroma Cloud sample) -> 72.6% match
+    # Intermediate match (distance = 0.274, real Chroma Cloud sample) -> 86.3% match
     c_sample = RetrievedChunk("id_sample", "text", None, "t", distance=0.274)
-    assert round(c_sample.relevance_score, 3) == 0.726
+    assert round(c_sample.relevance_score, 3) == 0.863
 
-    # Orthogonal vector (distance = 1.0) -> zero similarity (0.0)
-    c_orthogonal = RetrievedChunk("id_1", "text", None, "t", distance=1.0)
+    # Benchmark pair (distance = 0.4035) -> 79.83% match
+    c_bench = RetrievedChunk("id_bench", "text", None, "t", distance=0.4035)
+    assert round(c_bench.relevance_score, 4) == 0.7983
+
+    # Orthogonal vector (distance = 2.0) -> zero similarity (0.0)
+    c_orthogonal = RetrievedChunk("id_1", "text", None, "t", distance=2.0)
     assert c_orthogonal.relevance_score == 0.0
 
-    # Diametrically opposed vector (distance = 2.0) -> clamped at 0.0
-    c_opposite = RetrievedChunk("id_2", "text", None, "t", distance=2.0)
+    # Diametrically opposed vector (distance = 4.0) -> clamped at 0.0
+    c_opposite = RetrievedChunk("id_2", "text", None, "t", distance=4.0)
     assert c_opposite.relevance_score == 0.0
 
 
@@ -107,5 +112,6 @@ def test_retriever_query_parsing():
     assert results[0].title == "Merge Sort"
     assert results[0].source_url == "https://geeksforgeeks.org/merge-sort"
     assert round(results[0].distance, 2) == 0.22
-    assert round(results[0].relevance_score, 2) == 0.78
+    # 1 - (0.22 / 2) = 0.89
+    assert round(results[0].relevance_score, 2) == 0.89
 
