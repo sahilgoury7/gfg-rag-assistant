@@ -1,11 +1,11 @@
 """Generator Service Module.
 
 Implements a resilient Dual-LLM Generation Engine:
-- Primary Provider: Google Gemini (gemini-2.5-flash) via native google-genai SDK
-- Fallback Provider: Groq LPU (llama-3.3-70b-versatile) via native groq SDK
+- Primary Provider: Groq LPU (llama-3.3-70b-versatile) via native groq SDK
+- Fallback Provider: Google Gemini (gemini-2.0-flash) via native google-genai SDK
 
-Guarantees 99.9% uptime by automatically failing over when the primary provider
-encounters 429 rate-limiting, 503 model overload, or network timeouts.
+Features automatic failover when the primary provider encounters rate-limiting (429),
+service overload (503), or network timeouts.
 """
 
 from dataclasses import dataclass
@@ -67,7 +67,7 @@ class GeneratorService:
 
         client = self._get_gemini_client()
         response = client.models.generate_content(
-            model=self._settings.primary_llm_model,
+            model=self._settings.gemini_model,
             contents=user_prompt,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
@@ -85,7 +85,7 @@ class GeneratorService:
             raise RuntimeError("Groq API key not configured for failover.")
 
         response = client.chat.completions.create(
-            model=self._settings.fallback_llm_model,
+            model=self._settings.groq_model,
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
@@ -111,7 +111,7 @@ Question: {query}
             ans = self._generate_with_groq(user_prompt)
             return GenerationResult(
                 answer=ans,
-                model_used=self._settings.fallback_llm_model,
+                model_used=self._settings.groq_model,
                 provider="groq",
                 fallback_triggered=not use_groq_first,
             )
@@ -120,7 +120,7 @@ Question: {query}
             ans = self._generate_with_gemini(user_prompt)
             return GenerationResult(
                 answer=ans,
-                model_used=self._settings.primary_llm_model,
+                model_used=self._settings.gemini_model,
                 provider="google",
                 fallback_triggered=use_groq_first,
             )

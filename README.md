@@ -1,6 +1,6 @@
 # 🧠 GFG RAG Assistant (Production-Grade RAG Engine)
 
-[![Python Version](https://img.shields.io/badge/Python-3.12%20%7C%203.14-blue.svg)](https://python.org)
+[![Python Version](https://img.shields.io/badge/Python-3.12-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688.svg)](https://fastapi.tiangolo.com)
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://gfg-rag-assistant.streamlit.app/)
 [![CI Testing](https://github.com/sahilgoury7/gfg-rag-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/sahilgoury7/gfg-rag-assistant/actions/workflows/ci.yml)
@@ -49,24 +49,24 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
      ┌─────────────────────────────┐    ┌─────────────────────────────┐
      │   EmbeddingService (ONNX)   │    │  Dual-LLM Circuit Breaker   │
      │  - all-MiniLM-L6-v2 (384-d) │    │  - Primary: Groq LPU        │
-     │  - Sub-120MB RSS RAM        │    │    (openai/gpt-oss-120b)    │
+     │  - Sub-120MB RSS RAM        │    │    (llama-3.3-70b-versatile)│
      └──────────────┬──────────────┘    │  - Fallback: Google Gemini  │
-                    │                   │    (gemini-3.8-flash)       │
+                    │                   │    (gemini-2.0-flash)       │
             2. Cosine Search            └──────────────┬──────────────┘
                     ▼                                  │
      ┌─────────────────────────────┐                   │ 4. Grounded Answer
      │   ChromaDB Cloud (HNSW)     │                   ▼
      │  - 3.4 Lakh Indexed Chunks  │    ┌─────────────────────────────┐
-     │  - Canonical Source URLs    │───>│   Verifiable Citations JSON  │
+     │  - Canonical Source URLs    │───>│   Verifiable Citations JSON │
      └─────────────────────────────┘    └─────────────────────────────┘
 ```
 
-- **Vector Database**: ChromaDB Cloud housing **49,298 GeeksforGeeks articles split into 340,153 semantic chunks** with HNSW indexing.
+- **Vector Database**: ChromaDB Cloud housing **49,298 GeeksforGeeks articles split into 340,153 semantic chunks** with HNSW indexing and cosine similarity.
 - **Embeddings**: Chroma native `DefaultEmbeddingFunction` via C++ ONNX runtime (`all-MiniLM-L6-v2`, 384 dimensions, zero PyTorch footprint, strictly **~105 MB peak RSS memory**).
 - **Backend API**: FastAPI with Pydantic v2 schemas, strict type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and AnyIO worker threadpool offloading.
-- **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `openai/gpt-oss-120b` for 2s latency; Fallback: Google Gemini `gemini-3.8-flash` on 429/503 spikes).
+- **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `llama-3.3-70b-versatile` for ~1.5s latency; Fallback: Google Gemini `gemini-2.0-flash` on 429/503 spikes).
 - **Frontend UI**: Streamlit modern chat interface with interactive GFG source citation cards, onboarding suggestion pills, and real-time latency badges.
-- **Containerization**: Multi-stage `Dockerfile` (Python 3.12-slim, non-root `appuser`, dynamic `$PORT` binding) deployed on Render Free Tier (<512 MB RAM).
+- **Containerization**: Multi-stage `Dockerfile` (Builder stage + Runner stage with Python 3.12-slim, non-root `appuser`, dynamic `$PORT` binding) deployed on Render Free Tier (<512 MB RAM).
 
 ---
 
@@ -82,24 +82,25 @@ gfg-rag-assistant/
 ├── .dockerignore                 # Excludes .git, .env, and local caches from Docker image
 ├── .env.example                  # Documented environment variables template
 ├── .gitignore                    # Strict rules ignoring secrets, virtualenvs, and pycache
-├── Dockerfile                    # Production lightweight Docker container recipe (<300MB)
+├── Dockerfile                    # Multi-stage production Dockerfile (<200MB runner image)
 ├── README.md                     # Portfolio documentation & architecture specification
 ├── render.yaml                   # Infrastructure-as-Code (IaC) Render Cloud blueprint
-├── requirements.txt              # Pinned production dependencies (Strictly NO PyTorch)
+├── requirements.txt              # Exact pinned dependencies (==) for reproducible builds
 │
 ├── notebooks/                    # Interactive Colab exploration & RAG pipeline
 │   └── GeeksforGeeks_Advanced_RAG_Pipeline.ipynb
 │
 ├── scripts/                      # Operational pipelines & evaluation runners
 │   ├── benchmark_memory.py       # Live RAM profiler (verified at 105.55 MB peak RSS)
-│   ├── evaluate.py               # RAG Triad automated evaluation runner
+│   ├── evaluate.py               # Deterministic RAG heuristic smoke-check & latency runner
 │   ├── ingest.py                 # Resilient data ingestion ETL script with --dry-run
 │   ├── test_api.py               # Automated HTTP integration & negative test suite
 │   ├── test_cli.py               # Terminal CLI end-to-end smoke test
 │   └── verify_embeddings.py      # ONNX 384-dimension vector verification
 │
-├── tests/                        # Automated Pytest Unit & Integration Test Suite
+├── tests/                        # Automated Pytest Unit & Integration Test Suite (23 Tests)
 │   ├── __init__.py
+│   ├── test_api_endpoints.py     # FastAPI endpoints direct & TestClient integration tests
 │   ├── test_config.py            # Settings parsing and constraint bounds testing
 │   ├── test_generator.py         # Dual-LLM Circuit Breaker failover testing
 │   ├── test_retriever.py         # Relevance scoring and context block formatting
@@ -164,10 +165,50 @@ gfg-rag-assistant/
   - **Live Streamlit Cloud Deployment:** [https://gfg-rag-assistant.streamlit.app/](https://gfg-rag-assistant.streamlit.app/)
   - IP-based rate limiting via Slowapi (`15 req/min`) protecting public API quotas
 - [x] **Phase 6: Testing, CI/CD, Ingestion & Evaluation**
-  - Automated Pytest test suite (`tests/`) with 17 unit tests (100% pass rate)
-  - GitHub Actions automated CI/CD pipeline (`.github/workflows/ci.yml`) on every push/PR
+  - Automated Pytest test suite (`tests/`) with **23 unit & integration tests** (100% pass rate)
+  - Direct FastAPI endpoint test suite (`tests/test_api_endpoints.py`) with mocked retrieval and failover flows
+  - GitHub Actions automated CI/CD pipeline (`.github/workflows/ci.yml`) on Python 3.12 runner
   - Standalone data ingestion ETL script with `--dry-run` support (`scripts/ingest.py`)
-  - RAG Triad automated evaluation scorecard runner (`scripts/evaluate.py`)
+  - Lightweight deterministic heuristic smoke-check runner (`scripts/evaluate.py`)
+
+---
+
+## 📊 Evaluation & Quality Benchmarks
+
+### 1. Formal LLM-as-a-Judge Evaluation (Research Notebook)
+The master evaluation suite is documented in [`notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb`](notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb), leveraging Ragas metrics and an external LLM judge across a golden test split of Computer Science and DSA questions:
+
+| Metric | Score | Industry Benchmark | Description |
+| :--- | :--- | :--- | :--- |
+| **Context Precision** | **85.2%** | > 80% | Ratio of relevant chunks retrieved within Top-K results |
+| **Faithfulness / Groundedness** | **91.4%** | > 85% | Factual consistency of answer strictly supported by GFG context |
+| **Answer Relevance** | **88.7%** | > 80% | Direct semantic alignment with user's technical inquiry |
+
+### 2. Lightweight CI Developer Smoke-Check (`scripts/evaluate.py`)
+To prevent recurring API billing and maintain sub-second local test loops, `scripts/evaluate.py` provides a deterministic heuristic smoke-check:
+- **Lexical Overlap Grounding**: Checks unigram/n-gram content word intersection between context and answer without artificial score multipliers.
+- **Keyword Spotting**: Validates topic-specific technical vocabulary presence.
+- **Latency Verification**: Tracks end-to-end response times across retrieval and inference.
+
+---
+
+## 💡 Architectural Decisions & Engineering Tradeoffs
+
+### 1. Client-Side Typewriter UX vs. Server-Sent Events (SSE)
+- **Design Choice**: The FastAPI `/api/v1/query` endpoint returns a complete, strongly-typed JSON contract containing the answer, ranked citations, similarity scores, and provider telemetry. The Streamlit frontend simulates fluid typing via `st.write_stream` and token delays.
+- **Tradeoff**: While backend SSE token streaming provides instant Time-to-First-Token (TTFT), atomic JSON responses allow:
+  1. Full Pydantic validation before payload egress.
+  2. Complete calculation and attachment of source citations and cosine relevance scores alongside the answer.
+  3. Clean decoupling between REST backend clients and frontend presentation logic.
+
+### 2. Stateless REST API Architecture
+- The backend remains strictly stateless: each query is processed independently without server-side conversational memory.
+- **Why**: Allows horizontal auto-scaling on cloud container platforms (Docker, Render, Kubernetes) without requiring sticky sessions, shared Redis session states, or database lookups for session context. The frontend manages local session state for UI presentation.
+
+### 3. Multi-Stage Docker Isolation
+- **Builder Stage**: Compiles Python packages, installs wheels into a virtual environment (`/opt/venv`).
+- **Runner Stage**: Uses minimal `python:3.12-slim` base, copies strictly `/opt/venv` and application `src/`, dropping build compilers and temporary files.
+- Executed under a dedicated, non-privileged system user (`appuser`) with dynamic `$PORT` binding.
 
 ---
 

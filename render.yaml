@@ -32,10 +32,10 @@ services:
         value: articles
 
       # LLM Models Configuration
-      - key: PRIMARY_LLM_MODEL
-        value: gemini-3.8-flash
-      - key: FALLBACK_LLM_MODEL
-        value: openai/gpt-oss-120b
+      - key: GROQ_MODEL
+        value: llama-3.3-70b-versatile
+      - key: GEMINI_MODEL
+        value: gemini-2.0-flash
 
       # CORS Configuration
       - key: ALLOWED_ORIGINS

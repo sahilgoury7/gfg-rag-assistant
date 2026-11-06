@@ -1,50 +1,65 @@
 # ==============================================================================
-# Production Dockerfile for GFG RAG Assistant
+# Production Multi-Stage Dockerfile for GFG RAG Assistant
 #
 # Target Platform: Render Web Service (Free Tier: 512 MB RAM / 0.1 CPU)
-# Base Image: Python 3.12-slim (Debian Bookworm, ~150 MB footprint)
-# Security: Non-root user execution, no hardcoded secrets, minimal attack surface
+# Base Image: Python 3.12-slim (Debian Bookworm)
+# Security: Multi-stage isolation, non-root user execution, no secrets baked in
 # ==============================================================================
 
-FROM python:3.12-slim AS runtime
+# ------------------------------------------------------------------------------
+# Stage 1: Build & Dependency Isolation
+# ------------------------------------------------------------------------------
+FROM python:3.12-slim AS builder
 
-# Set environment optimizations
-# - PYTHONDONTWRITEBYTECODE: Prevents writing .pyc files to save container disk space
-# - PYTHONUNBUFFERED: Forces stdout/stderr flush immediately for real-time cloud logs
+WORKDIR /build
+
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8000
+    PYTHONUNBUFFERED=1
 
-# Set container working directory
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# ------------------------------------------------------------------------------
+# Stage 2: Minimal Production Runtime
+# ------------------------------------------------------------------------------
+FROM python:3.12-slim AS runner
+
 WORKDIR /app
 
-# Install minimal OS dependencies if needed (curl for healthchecks)
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH" \
+    PORT=8000
+
+# Install curl strictly for container healthchecks
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Step 1: Copy ONLY requirements first to leverage Docker layer caching
-COPY requirements.txt .
+# Copy pre-built virtual environment from builder stage
+COPY --from=builder /opt/venv /opt/venv
 
-# Step 2: Install dependencies with --no-cache-dir to keep image size under 300 MB
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Step 3: Copy source code into container
+# Copy application source code
 COPY src/ ./src/
 
-# Step 4: Security Hardening — Create non-root system user and grant access
+# Security Hardening: Run as non-privileged system user
 RUN useradd --create-home --shell /bin/bash appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Expose the API port
 EXPOSE 8000
 
-# Liveness Healthcheck
+# Container liveness probe
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:${PORT}/health || exit 1
 
-# Start Uvicorn ASGI server with dynamic PORT resolution (required by Render)
+# Start Uvicorn ASGI server with dynamic PORT resolution
 CMD ["sh", "-c", "uvicorn src.main:app --host 0.0.0.0 --port ${PORT}"]
-

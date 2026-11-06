@@ -5,6 +5,7 @@ articles indexed in ChromaDB Cloud with grounded Dual-LLM answers and
 verifiable citations.
 """
 
+import os
 import time
 import requests
 import streamlit as st
@@ -27,7 +28,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-DEFAULT_CLOUD_BACKEND = "https://gfg-rag-assistant.onrender.com"
+DEFAULT_CLOUD_BACKEND = os.getenv("BACKEND_URL", "https://gfg-rag-assistant.onrender.com")
 DEFAULT_LOCAL_BACKEND = "http://127.0.0.1:8000"
 
 # -----------------------------------------------------------------------------
@@ -104,7 +105,7 @@ with st.sidebar:
 st.title("📚 GeeksforGeeks RAG Assistant")
 st.caption(
     "Grounding your Computer Science and DSA questions in **49,298 verified GeeksforGeeks articles (3.4 Lakh chunks)** "
-    "with instant source citations and zero hallucination."
+    "with instant source citations and strict context grounding."
 )
 
 # -----------------------------------------------------------------------------

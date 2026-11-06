@@ -1,9 +1,13 @@
-"""RAG Triad Automated Evaluation Engine.
+"""RAG Pipeline Quick Smoke-Check & Heuristic Sanity Benchmark.
 
-Evaluates the production RAG pipeline against the industry standard RAG Triad:
-  1. Context Relevance: Does the retrieved GFG context contain the needed technical facts?
-  2. Groundedness (Faithfulness): Is the answer 100% supported by the context without hallucination?
-  3. Answer Relevance: Does the response directly address the user's technical inquiry?
+Performs a fast, deterministic offline sanity check on sample technical questions
+to verify retrieval accuracy, latency, and lexical grounding without incurring
+heavy LLM judge costs.
+
+NOTE: This script is intended as a quick CI/developer smoke-check. For the complete,
+formal LLM-as-a-judge evaluation (Ragas Context Precision, Groundedness, and Semantic
+Faithfulness across 100+ evaluation pairs with 81% - 85% precision), refer to the
+master research notebook in `notebooks/`.
 
 Usage:
   python scripts/evaluate.py
@@ -70,21 +74,25 @@ def evaluate_context_relevance(context: str, expected_keywords: list[str]) -> fl
     return round(matches / len(expected_keywords), 2)
 
 
-def evaluate_faithfulness(answer: str, context: str) -> float:
-    """Heuristic check: Verifies key factual assertions in answer are grounded in context."""
+def evaluate_lexical_grounding(answer: str, context: str) -> float:
+    """Heuristic smoke-check: Computes lexical word overlap between answer and context.
+
+    Note: This is a fast word-overlap heuristic for local smoke tests, not a full
+    LLM-judge semantic evaluation.
+    """
     if not answer or "cannot find enough details" in answer:
-        return 1.0  # Safe rejection is 100% faithful to context limits
-    
-    # Check overlap of substantial content words
+        return 1.0  # Safe rejection adheres to context limits
+
+    # Check overlap of substantial content words (> 4 characters)
     answer_words = set(w.lower() for w in answer.split() if len(w) > 4)
     context_words = set(w.lower() for w in context.split() if len(w) > 4)
-    
+
     if not answer_words:
         return 1.0
-    
+
     grounded_words = answer_words.intersection(context_words)
-    score = min(1.0, (len(grounded_words) / len(answer_words)) * 1.3)
-    return round(score, 2)
+    score = len(grounded_words) / len(answer_words)
+    return round(min(1.0, score), 2)
 
 
 def evaluate_answer_relevance(query: str, answer: str, expected_keywords: list[str]) -> float:
@@ -129,25 +137,25 @@ def run_rag_triad_evaluation(samples: int | None = None) -> None:
         gen_result = generator.generate(query=query, context=context)
         latency = time.perf_counter() - t0
 
-        # 3. Calculate RAG Triad Metrics
+        # 3. Calculate RAG Heuristic Metrics
         c_rel = evaluate_context_relevance(context, keywords)
-        faith = evaluate_faithfulness(gen_result.answer, context)
+        grounding = evaluate_lexical_grounding(gen_result.answer, context)
         a_rel = evaluate_answer_relevance(query, gen_result.answer, keywords)
-        composite = round((c_rel + faith + a_rel) / 3, 2)
+        composite = round((c_rel + grounding + a_rel) / 3, 2)
 
         results.append({
             "query": query,
             "category": category,
             "provider": gen_result.provider.upper(),
             "context_relevance": c_rel,
-            "faithfulness": faith,
+            "lexical_grounding": grounding,
             "answer_relevance": a_rel,
             "composite_score": composite,
             "latency_s": round(latency, 2),
         })
 
         logger.info(
-            f"    -> Context Rel: {c_rel:.2f} | Faithfulness: {faith:.2f} | "
+            f"    -> Context Rel: {c_rel:.2f} | Grounding: {grounding:.2f} | "
             f"Answer Rel: {a_rel:.2f} | Composite: {composite:.2f} | Latency: {latency:.2f}s"
         )
 
@@ -155,24 +163,24 @@ def run_rag_triad_evaluation(samples: int | None = None) -> None:
 
     # Summary Scorecard
     avg_c_rel = round(sum(r["context_relevance"] for r in results) / total_cases, 2)
-    avg_faith = round(sum(r["faithfulness"] for r in results) / total_cases, 2)
+    avg_grounding = round(sum(r["lexical_grounding"] for r in results) / total_cases, 2)
     avg_a_rel = round(sum(r["answer_relevance"] for r in results) / total_cases, 2)
     avg_composite = round(sum(r["composite_score"] for r in results) / total_cases, 2)
     avg_latency = round(sum(r["latency_s"] for r in results) / total_cases, 2)
 
     print("\n" + "=" * 70)
-    print("🏆 GFG RAG TRIAD EVALUATION SCORECARD")
+    print("📋 GFG RAG PIPELINE HEURISTIC SMOKE CHECK")
     print("=" * 70)
-    print(f"{'Category':<22} | {'C-Rel':<6} | {'Faith':<6} | {'A-Rel':<6} | {'Score':<6} | {'Latency'}")
+    print(f"{'Category':<22} | {'C-Rel':<6} | {'Ground':<6} | {'A-Rel':<6} | {'Score':<6} | {'Latency'}")
     print("-" * 70)
     for r in results:
         print(
-            f"{r['category']:<22} | {r['context_relevance']:<6.2f} | {r['faithfulness']:<6.2f} | "
+            f"{r['category']:<22} | {r['context_relevance']:<6.2f} | {r['lexical_grounding']:<6.2f} | "
             f"{r['answer_relevance']:<6.2f} | {r['composite_score']:<6.2f} | {r['latency_s']:.2f}s"
         )
     print("-" * 70)
     print(
-        f"{'AVERAGE / OVERALL':<22} | {avg_c_rel:<6.2f} | {avg_faith:<6.2f} | "
+        f"{'AVERAGE / OVERALL':<22} | {avg_c_rel:<6.2f} | {avg_grounding:<6.2f} | "
         f"{avg_a_rel:<6.2f} | {avg_composite:<6.2f} | {avg_latency:.2f}s"
     )
     print("=" * 70)

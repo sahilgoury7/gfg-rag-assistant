@@ -21,8 +21,8 @@ class Settings(BaseSettings):
 
     # ChromaDB Cloud Configuration (3.4 Lakh Indexed GFG Chunks)
     chroma_api_key: str = Field(
-        ...,
-        description="Chroma Cloud API Token for authentication"
+        default="",
+        description="Chroma Cloud API Token for authentication",
     )
     chroma_tenant: str = Field(
         default="f98bf1bd-b7ed-4d64-90a8-9c4be572e360",
@@ -40,27 +40,37 @@ class Settings(BaseSettings):
     # Primary LLM Provider Choice
     primary_provider: Literal["groq", "google"] = Field(
         default="groq",
-        description="Primary LLM provider to attempt first (groq or google)"
+        description="Primary LLM provider to attempt first (groq or google)",
     )
 
-    # Google Gemini Configuration
-    gemini_api_key: str = Field(
-        default="",
-        description="Google AI Studio API Key for Gemini"
-    )
-    primary_llm_model: str = Field(
-        default="gemini-3.8-flash",
-        description="Primary fast & lean generation model"
-    )
-
-    # Fallback LLM: Groq (Bypasses 429/503 spikes)
+    # Groq LPU Configuration (Primary)
     groq_api_key: str = Field(
         default="",
-        description="Groq API key for LPU failover"
+        description="Groq API key for LPU inference",
+    )
+    groq_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="Groq LPU model (ultra-fast inference)",
+    )
+
+    # Google Gemini Configuration (Failover)
+    gemini_api_key: str = Field(
+        default="",
+        description="Google AI Studio API Key for Gemini",
+    )
+    gemini_model: str = Field(
+        default="gemini-2.0-flash",
+        description="Google Gemini model for resilient generation",
+    )
+
+    # Backwards-compatible aliases
+    primary_llm_model: str = Field(
+        default="llama-3.3-70b-versatile",
+        description="Alias for primary model name",
     )
     fallback_llm_model: str = Field(
-        default="openai/gpt-oss-120b",
-        description="Fallback high-speed LPU model"
+        default="gemini-2.0-flash",
+        description="Alias for fallback model name",
     )
 
     # Retrieval Hyperparameters
