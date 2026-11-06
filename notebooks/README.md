@@ -32,7 +32,7 @@ This 87-cell interactive notebook represents the **complete research and enginee
 
 Rather than relying on naive vector search, this notebook implements, tests, and evaluates:
 - **Massive Ingestion:** Parsing, cleaning, and chunking 49,298 articles across 30 CSV files into 340,153 semantic vectors.
-- **Two-Stage Hybrid Search:** Blending dense HNSW cosine search (Chroma Cloud) with sparse keyword search (BM25Okapi) using **Reciprocal Rank Fusion (RRF)**.
+- **Two-Stage Hybrid Search:** Blending dense HNSW vector search (Chroma Cloud) with sparse keyword search (BM25Okapi) using **Reciprocal Rank Fusion (RRF)**.
 - **Cross-Encoder Re-Ranking:** Elevating Context Precision from **81.0% to 85.0%** using `ms-marco-MiniLM-L-6-v2`.
 - **Adversarial Hardening:** Surviving 3 penetration attacks (out-of-domain traps, conflicting specs, and prompt injections) with a **100% defense rate**.
 
@@ -56,7 +56,7 @@ Rather than relying on naive vector search, this notebook implements, tests, and
         │
         ├──> [Query Rewriter / Multi-Query Expansion] (Sub-query generation)
         │
-        ├──> Path 1: Dense Vector Search (ChromaDB HNSW Cosine, Top-15)
+        ├──> Path 1: Dense Vector Search (ChromaDB HNSW, Top-15)
         ├──> Path 2: Sparse Lexical Search (BM25Okapi, Top-15)
         │
         ▼
