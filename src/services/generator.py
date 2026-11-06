@@ -1,8 +1,8 @@
 """Generator Service Module.
 
 Implements a resilient Dual-LLM Generation Engine:
-- Primary Provider: Groq LPU (llama-3.3-70b-versatile) via native groq SDK
-- Fallback Provider: Google Gemini (gemini-2.0-flash) via native google-genai SDK
+- Primary Provider: Groq LPU (openai/gpt-oss-120b) via native groq SDK
+- Fallback Provider: Google Gemini (gemini-2.5-flash) via native google-genai SDK
 
 Features automatic failover when the primary provider encounters rate-limiting (429),
 service overload (503), or network timeouts.

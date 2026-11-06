@@ -31,6 +31,25 @@ def test_chunk_relevance_score_conversion():
     assert chunk_far.relevance_score == 0.0
 
 
+def test_chroma_cosine_space_relevance_bounds():
+    """Chroma HNSW cosine distance (0.0 to 2.0) converts monotonically to [0.0, 1.0]."""
+    # Identical vector (distance = 0.0) -> perfect similarity (1.0)
+    c_identical = RetrievedChunk("id_0", "text", None, "t", distance=0.0)
+    assert c_identical.relevance_score == 1.0
+
+    # Intermediate match (distance = 0.274, real Chroma Cloud sample) -> 72.6% match
+    c_sample = RetrievedChunk("id_sample", "text", None, "t", distance=0.274)
+    assert round(c_sample.relevance_score, 3) == 0.726
+
+    # Orthogonal vector (distance = 1.0) -> zero similarity (0.0)
+    c_orthogonal = RetrievedChunk("id_1", "text", None, "t", distance=1.0)
+    assert c_orthogonal.relevance_score == 0.0
+
+    # Diametrically opposed vector (distance = 2.0) -> clamped at 0.0
+    c_opposite = RetrievedChunk("id_2", "text", None, "t", distance=2.0)
+    assert c_opposite.relevance_score == 0.0
+
+
 def test_format_context_multiple_chunks():
     """format_context should format chunks with document markers and titles."""
     chunks = [

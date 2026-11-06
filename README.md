@@ -49,9 +49,9 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
      ┌─────────────────────────────┐    ┌─────────────────────────────┐
      │   EmbeddingService (ONNX)   │    │  Dual-LLM Circuit Breaker   │
      │  - all-MiniLM-L6-v2 (384-d) │    │  - Primary: Groq LPU        │
-     │  - Sub-120MB RSS RAM        │    │    (llama-3.3-70b-versatile)│
+     │  - Sub-120MB RSS RAM        │    │    (openai/gpt-oss-120b)    │
      └──────────────┬──────────────┘    │  - Fallback: Google Gemini  │
-                    │                   │    (gemini-2.0-flash)       │
+                    │                   │    (gemini-2.5-flash)       │
             2. Cosine Search            └──────────────┬──────────────┘
                     ▼                                  │
      ┌─────────────────────────────┐                   │ 4. Grounded Answer
@@ -63,10 +63,10 @@ A production-grade, memory-efficient Retrieval-Augmented Generation (RAG) assist
 
 - **Vector Database**: ChromaDB Cloud housing **49,298 GeeksforGeeks articles split into 340,153 semantic chunks** with HNSW indexing and cosine similarity.
 - **Embeddings**: Chroma native `DefaultEmbeddingFunction` via C++ ONNX runtime (`all-MiniLM-L6-v2`, 384 dimensions, zero PyTorch footprint, strictly **~105 MB peak RSS memory**).
-- **Backend API**: FastAPI with Pydantic v2 schemas, strict type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and AnyIO worker threadpool offloading.
-- **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `llama-3.3-70b-versatile` for ~1.5s latency; Fallback: Google Gemini `gemini-2.0-flash` on 429/503 spikes).
+- **Backend API**: FastAPI with Pydantic v2 schemas, strict type bounds (`top_k: ge=1, le=10`), `@field_validator` against empty queries, and reverse proxy client IP resolution.
+- **LLM Circuit Breaker**: Dual-provider resilient generation engine (Primary: Groq LPU `openai/gpt-oss-120b` for ~1.5s latency; Fallback: Google Gemini `gemini-2.5-flash` on 429/503 spikes).
 - **Frontend UI**: Streamlit modern chat interface with interactive GFG source citation cards, onboarding suggestion pills, and real-time latency badges.
-- **Containerization**: Multi-stage `Dockerfile` (Builder stage + Runner stage with Python 3.12-slim, non-root `appuser`, dynamic `$PORT` binding) deployed on Render Free Tier (<512 MB RAM).
+- **Containerization**: Multi-stage `Dockerfile` (Builder stage + Runner stage with Python 3.12-slim, non-root `appuser`, dynamic `$PORT` binding, and proxy header forwarding) deployed on Render Free Tier (<512 MB RAM).
 
 ---
 
@@ -165,8 +165,8 @@ gfg-rag-assistant/
   - **Live Streamlit Cloud Deployment:** [https://gfg-rag-assistant.streamlit.app/](https://gfg-rag-assistant.streamlit.app/)
   - IP-based rate limiting via Slowapi (`15 req/min`) protecting public API quotas
 - [x] **Phase 6: Testing, CI/CD, Ingestion & Evaluation**
-  - Automated Pytest test suite (`tests/`) with **23 unit & integration tests** (100% pass rate)
-  - Direct FastAPI endpoint test suite (`tests/test_api_endpoints.py`) with mocked retrieval and failover flows
+  - Automated Pytest test suite (`tests/`) with **24 unit & integration tests** (100% pass rate on Linux CI)
+  - Direct FastAPI endpoint test suite (`tests/test_api_endpoints.py`) with mocked retrieval, failover, and proxy IP resolution
   - GitHub Actions automated CI/CD pipeline (`.github/workflows/ci.yml`) on Python 3.12 runner
   - Standalone data ingestion ETL script with `--dry-run` support (`scripts/ingest.py`)
   - Lightweight deterministic heuristic smoke-check runner (`scripts/evaluate.py`)
@@ -176,16 +176,20 @@ gfg-rag-assistant/
 ## 📊 Evaluation & Quality Benchmarks
 
 ### 1. Formal LLM-as-a-Judge Evaluation (Research Notebook)
-The master evaluation suite is documented in [`notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb`](notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb), leveraging Ragas metrics and an external LLM judge across a golden test split of Computer Science and DSA questions:
+The master evaluation suite is documented in [`notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb`](notebooks/GeeksforGeeks_Advanced_RAG_Pipeline.ipynb) and [`notebooks/README.md`](notebooks/README.md), evaluated across 5 complex Computer Science & DSA golden benchmark domains (Graph Theory, Searching, Sorting, OOP, and Algorithm Design) using Gemini as an external LLM judge:
 
-| Metric | Score | Industry Benchmark | Description |
-| :--- | :--- | :--- | :--- |
-| **Context Precision** | **85.2%** | > 80% | Ratio of relevant chunks retrieved within Top-K results |
-| **Faithfulness / Groundedness** | **91.4%** | > 85% | Factual consistency of answer strictly supported by GFG context |
-| **Answer Relevance** | **88.7%** | > 80% | Direct semantic alignment with user's technical inquiry |
+| Metric | Basic RAG (Top-5 Dense) | Advanced RAG (Top-3 Re-Ranked) | Delta ($\Delta$) | Architectural Takeaway |
+| :--- | :---: | :---: | :---: | :--- |
+| **Context Precision** | **81.0%** | **85.0%** | **+4.0% 🟢** | Cross-Encoder successfully promoted the true answer chunk to Rank 1. |
+| **Context Recall** | **90.0%** | **85.0%** | **-5.0% 🔍** | Pruning from 5 to 3 chunks slightly reduced peripheral fact surface area. |
+| **Faithfulness** | **91.0%** | **85.0%** | **-6.0%** | Both pipelines strictly adhered to grounding context without hallucinating. |
+| **Answer Relevance** | **90.0%** | **85.0%** | **-5.0%** | Direct, concise, technical answers without fluff. |
+
+> 💡 **Precision vs. Recall Root Cause Analysis (RCA):**  
+> Cutting context from 5 chunks to 3 chunks saves **40% token costs** and eliminates noisy peripheral chunks (+4% Precision). However, discarding chunks 4 and 5 slightly reduces broad context coverage (Recall drops from 90% to 85%), which slightly compressed Faithfulness and Relevance judge scores across the 5 test cases. To strike the ideal production balance between precision and coverage, the backend defaults to `top_k = 4`.
 
 ### 2. Lightweight CI Developer Smoke-Check (`scripts/evaluate.py`)
-To prevent recurring API billing and maintain sub-second local test loops, `scripts/evaluate.py` provides a deterministic heuristic smoke-check:
+To prevent recurring API billing and maintain sub-second local test loops during development and CI, `scripts/evaluate.py` provides a deterministic heuristic smoke-check:
 - **Lexical Overlap Grounding**: Checks unigram/n-gram content word intersection between context and answer without artificial score multipliers.
 - **Keyword Spotting**: Validates topic-specific technical vocabulary presence.
 - **Latency Verification**: Tracks end-to-end response times across retrieval and inference.
@@ -195,19 +199,16 @@ To prevent recurring API billing and maintain sub-second local test loops, `scri
 ## 💡 Architectural Decisions & Engineering Tradeoffs
 
 ### 1. Client-Side Typewriter UX vs. Server-Sent Events (SSE)
-- **Design Choice**: The FastAPI `/api/v1/query` endpoint returns a complete, strongly-typed JSON contract containing the answer, ranked citations, similarity scores, and provider telemetry. The Streamlit frontend simulates fluid typing via `st.write_stream` and token delays.
-- **Tradeoff**: While backend SSE token streaming provides instant Time-to-First-Token (TTFT), atomic JSON responses allow:
-  1. Full Pydantic validation before payload egress.
-  2. Complete calculation and attachment of source citations and cosine relevance scores alongside the answer.
-  3. Clean decoupling between REST backend clients and frontend presentation logic.
+- **Current Architecture**: The FastAPI backend currently returns an atomic, strongly-typed JSON contract (`QueryResponse`) containing the answer, ranked citations, similarity scores, and provider telemetry. The Streamlit frontend simulates fluid typing via `st.write_stream` and token delays.
+- **Engineering Tradeoff & Roadmap**: An atomic JSON response allows simple, robust schema validation and clean coupling of citations and similarity scores alongside the answer. Upgrading to native backend Server-Sent Events (SSE) token streaming is our next planned architectural evolution.
 
-### 2. Stateless REST API Architecture
-- The backend remains strictly stateless: each query is processed independently without server-side conversational memory.
-- **Why**: Allows horizontal auto-scaling on cloud container platforms (Docker, Render, Kubernetes) without requiring sticky sessions, shared Redis session states, or database lookups for session context. The frontend manages local session state for UI presentation.
+### 2. Stateless REST API & Reverse Proxy Security
+- The backend remains strictly stateless: each query is processed independently without server-side conversational memory, allowing horizontal auto-scaling across container replicas without sticky sessions or distributed Redis locks.
+- Uvicorn runs with `--proxy-headers --forwarded-allow-ips='*'`, and `src/core/limiter.py` resolves true client IPs via `X-Forwarded-For` headers so cloud reverse proxies (Render, Cloudflare, ALB) do not cause global rate limit collisions across users.
 
-### 3. Multi-Stage Docker Isolation
-- **Builder Stage**: Compiles Python packages, installs wheels into a virtual environment (`/opt/venv`).
-- **Runner Stage**: Uses minimal `python:3.12-slim` base, copies strictly `/opt/venv` and application `src/`, dropping build compilers and temporary files.
+### 3. Multi-Stage Docker Build
+- **Builder Stage**: Installs dependencies and builds wheels into a clean virtual environment (`/opt/venv`).
+- **Runner Stage**: Minimal `python:3.12-slim` base, copying strictly `/opt/venv` and application `src/`, dropping build compilers and temporary files.
 - Executed under a dedicated, non-privileged system user (`appuser`) with dynamic `$PORT` binding.
 
 ---

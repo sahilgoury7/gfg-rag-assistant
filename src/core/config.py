@@ -49,7 +49,7 @@ class Settings(BaseSettings):
         description="Groq API key for LPU inference",
     )
     groq_model: str = Field(
-        default="llama-3.3-70b-versatile",
+        default="openai/gpt-oss-120b",
         description="Groq LPU model (ultra-fast inference)",
     )
 
@@ -59,17 +59,17 @@ class Settings(BaseSettings):
         description="Google AI Studio API Key for Gemini",
     )
     gemini_model: str = Field(
-        default="gemini-2.0-flash",
+        default="gemini-2.5-flash",
         description="Google Gemini model for resilient generation",
     )
 
     # Backwards-compatible aliases
     primary_llm_model: str = Field(
-        default="llama-3.3-70b-versatile",
+        default="openai/gpt-oss-120b",
         description="Alias for primary model name",
     )
     fallback_llm_model: str = Field(
-        default="gemini-2.0-flash",
+        default="gemini-2.5-flash",
         description="Alias for fallback model name",
     )
 

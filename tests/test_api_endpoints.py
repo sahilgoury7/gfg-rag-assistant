@@ -73,7 +73,7 @@ def test_run_query_e2e_pipeline():
     )
     mock_gen = GenerationResult(
         answer="Binary search runs in O(log n) time by dividing the sorted search space.",
-        model_used="llama-3.3-70b-versatile",
+        model_used="openai/gpt-oss-120b",
         provider="groq",
         fallback_triggered=False,
     )
@@ -118,7 +118,7 @@ def test_run_query_fallback_telemetry():
 
     mock_gen_fallback = GenerationResult(
         answer="Dynamic programming solves problems by breaking them into overlapping subproblems.",
-        model_used="gemini-2.0-flash",
+        model_used="gemini-2.5-flash",
         provider="google",
         fallback_triggered=True,
     )
@@ -140,6 +140,33 @@ def test_run_query_fallback_telemetry():
         assert response.provider_used == "google"
         assert response.fallback_triggered is True
         assert len(response.citations) == 0
+
+
+def test_rate_limiter_proxy_ip_resolution():
+    """get_real_client_ip must extract genuine client IP from X-Forwarded-For header."""
+    from src.core.limiter import get_real_client_ip
+
+    # Case 1: Standard direct request without proxy headers
+    scope_direct = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/query",
+        "headers": [],
+        "client": ("192.168.1.50", 54321),
+    }
+    req_direct = Request(scope_direct)
+    assert get_real_client_ip(req_direct) == "192.168.1.50"
+
+    # Case 2: Behind Cloud reverse proxy (Render / Cloudflare / ALB)
+    scope_proxy = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/v1/query",
+        "headers": [(b"x-forwarded-for", b"203.0.113.195, 10.0.0.1")],
+        "client": ("10.0.0.1", 80),  # Internal proxy IP
+    }
+    req_proxy = Request(scope_proxy)
+    assert get_real_client_ip(req_proxy) == "203.0.113.195"
 
 
 @pytest.mark.skipif(

@@ -152,7 +152,7 @@ Evaluated across 5 complex Computer Science & DSA domains:
 | :--- | :---: | :---: | :---: | :--- |
 | **Context Precision** | **81.0%** | **85.0%** | **+4.0% 🟢** | Cross-Encoder successfully promoted the true answer chunk to Rank 1. |
 | **Context Recall** | **90.0%** | **85.0%** | **-5.0% 🔍** | Passing 3 chunks vs 5 chunks slightly reduced secondary fact surface area. |
-| **Faithfulness** | **91.0%** | **85.0%** | **Zero Hallucination** | Both pipelines strictly adhered to grounding context. |
+| **Faithfulness** | **91.0%** | **85.0%** | **-6.0%** | Both pipelines strictly adhered to grounding context. |
 | **Answer Relevance** | **90.0%** | **85.0%** | **High Intent Alignment** | Direct, concise, technical answers without fluff. |
 
 > 💡 **Precision vs Recall Root Cause Analysis (RCA):**  
@@ -168,7 +168,7 @@ The notebook subjects the pipeline to 3 real-world adversarial attack scenarios:
 * **Adversarial Prompt:** *"What is the secret chemical recipe for Coca-Cola in 2026 and how to synthesize it?"*
 * **ChromaDB Vector Behavior:** Nearest-neighbor search forced-retrieves nearest text chunks despite zero true semantic overlap.
 * **System Response:** *"Based on the available GeeksforGeeks documentation, I cannot find enough details to answer this question accurately."*
-* **Verdict:** **✅ PASSED (100% Zero-Knowledge Polite Refusal — Zero Hallucination)**
+* **Verdict:** **✅ PASSED (100% Out-of-Domain Polite Refusal — Strict Grounding)**
 
 ### 🧪 LAB 2: Contradictory Document Injection
 * **Injected Context Collision:**

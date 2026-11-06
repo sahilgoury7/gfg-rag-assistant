@@ -87,7 +87,7 @@ with st.sidebar:
 
     st.divider()
 
-    if st.button("Clear chat history", icon=":material/delete:", width="stretch"):
+    if st.button("Clear chat history", icon=":material/delete:", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
 

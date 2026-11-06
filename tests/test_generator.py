@@ -16,10 +16,10 @@ def test_generator_primary_success():
     """Generator should return response from primary provider when it succeeds."""
     mock_settings = MagicMock()
     mock_settings.primary_provider = "groq"
-    mock_settings.groq_model = "llama-3.3-70b-versatile"
-    mock_settings.gemini_model = "gemini-2.0-flash"
-    mock_settings.fallback_llm_model = "gemini-2.0-flash"
-    mock_settings.primary_llm_model = "llama-3.3-70b-versatile"
+    mock_settings.groq_model = "openai/gpt-oss-120b"
+    mock_settings.gemini_model = "gemini-2.5-flash"
+    mock_settings.fallback_llm_model = "gemini-2.5-flash"
+    mock_settings.primary_llm_model = "openai/gpt-oss-120b"
 
     generator = GeneratorService(settings=mock_settings)
     generator._generate_with_groq = MagicMock(return_value="Binary search is O(log n).")
@@ -37,10 +37,10 @@ def test_generator_fallback_triggered_on_primary_failure():
     """Generator should transparently failover to Gemini when Groq fails."""
     mock_settings = MagicMock()
     mock_settings.primary_provider = "groq"
-    mock_settings.groq_model = "llama-3.3-70b-versatile"
-    mock_settings.gemini_model = "gemini-2.0-flash"
-    mock_settings.fallback_llm_model = "gemini-2.0-flash"
-    mock_settings.primary_llm_model = "llama-3.3-70b-versatile"
+    mock_settings.groq_model = "openai/gpt-oss-120b"
+    mock_settings.gemini_model = "gemini-2.5-flash"
+    mock_settings.fallback_llm_model = "gemini-2.5-flash"
+    mock_settings.primary_llm_model = "openai/gpt-oss-120b"
 
     generator = GeneratorService(settings=mock_settings)
     generator._generate_with_groq = MagicMock(side_effect=Exception("HTTP 429: Rate limit exceeded"))
@@ -59,10 +59,10 @@ def test_generator_both_providers_fail():
     """Generator should raise RuntimeError when both primary and secondary fail."""
     mock_settings = MagicMock()
     mock_settings.primary_provider = "groq"
-    mock_settings.groq_model = "llama-3.3-70b-versatile"
-    mock_settings.gemini_model = "gemini-2.0-flash"
-    mock_settings.fallback_llm_model = "gemini-2.0-flash"
-    mock_settings.primary_llm_model = "llama-3.3-70b-versatile"
+    mock_settings.groq_model = "openai/gpt-oss-120b"
+    mock_settings.gemini_model = "gemini-2.5-flash"
+    mock_settings.fallback_llm_model = "gemini-2.5-flash"
+    mock_settings.primary_llm_model = "openai/gpt-oss-120b"
 
     generator = GeneratorService(settings=mock_settings)
     generator._generate_with_groq = MagicMock(side_effect=Exception("Groq Down"))
